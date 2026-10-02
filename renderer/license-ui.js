@@ -65,6 +65,7 @@
   function applyStatus(status) {
     if (status && status.ok) {
       lockOverlay.hidden = true;
+      ipcRenderer.invoke('show-welcome').catch(() => {});
       return;
     }
     lockOverlay.hidden = false;

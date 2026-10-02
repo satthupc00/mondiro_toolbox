@@ -5,5 +5,4 @@ Nội dung hiện trong bảng thông báo cập nhật của app.
 Nếu tiêu đề không khớp version hoặc chưa có nội dung, GitHub sẽ không build bản mới.
 -->
 # v1.1.0
-- Kích hoạt bằng key (dùng chung key với Spine Preview)
-- Tự động cập nhật khi có bản mới
+Welcome you to Mondiro Toolbox - App tập hợp những app nhỏ với các tính năng riêng lẻ được gộp vào 1 app chung

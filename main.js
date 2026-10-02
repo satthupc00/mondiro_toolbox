@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { initLicense, isLocked } = require("./license.js");
@@ -14,6 +14,35 @@ if (process.platform === "win32") {
 app.setName("Mondiro Toolbox");
 
 let mainWindow;
+
+// First launch after a fresh install: show the notes of this version (release-notes.md) once.
+// Copies that update later already see the notes in the update dialog, so this only runs when
+// the app has never recorded a launch on this machine.
+const WELCOME_FILE = path.join(app.getPath("userData"), "welcome.json");
+
+function readReleaseNotes() {
+  try {
+    const text = fs.readFileSync(path.join(__dirname, "release-notes.md"), "utf-8").replace(/<!--[\s\S]*?-->/g, "");
+    return text.split(/\r?\n/).filter((l) => !/^#\s*v?[\d.]+\s*$/.test(l.trim())).join("\n").trim();
+  } catch (e) {
+    return "";
+  }
+}
+
+ipcMain.handle("show-welcome", async () => {
+  if (fs.existsSync(WELCOME_FILE)) return;
+  try { fs.writeFileSync(WELCOME_FILE, JSON.stringify({ firstVersion: app.getVersion() })); } catch (e) { /* not critical */ }
+  const notes = readReleaseNotes();
+  if (!notes || !mainWindow || mainWindow.isDestroyed()) return;
+  await dialog.showMessageBox(mainWindow, {
+    type: "info",
+    title: "Mondiro Toolbox",
+    message: `Mondiro Toolbox v${app.getVersion()}`,
+    detail: notes,
+    buttons: ["OK"],
+    noLink: true,
+  });
+});
 
 function createWindow() {
   const iconPath = path.join(__dirname, "build", "icon.png");

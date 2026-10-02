@@ -28,6 +28,7 @@
       "lib/**/*",
       "renderer/**/*",
       "package.json",
+      "release-notes.md",
       "build/icon.png",
       "build/icon.ico",
       "!dist/**",

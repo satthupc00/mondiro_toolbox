@@ -45,6 +45,7 @@ File nằm trong thư mục `dist/`.
 GitHub Actions sẽ tự build `MondiroToolbox-<version>-setup.exe` và đăng lên mục **Releases** (khoảng 5–10 phút, xem ở tab **Actions**).
 App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng, tự tải về, rồi hỏi
 "Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
+Máy cài mới thì lần đầu mở app (sau khi nhập key) sẽ hiện bảng chào mừng với nội dung `release-notes.md` của bản đó, chỉ hiện 1 lần.
 Khi đang dùng bản mới nhất, cạnh số phiên bản góc trái hiện chữ **(latest)** màu xanh.
 
 > **Lưu ý:**
