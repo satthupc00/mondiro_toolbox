@@ -17,14 +17,54 @@ Node.js + thư viện `jimp` (thuần JavaScript, không cần cài thêm phần
    ```
    Lần đầu `npm install` sẽ tải Electron về nên hơi lâu (vài phút), các lần sau sẽ nhanh.
 
-## Đóng gói thành file cài đặt .exe (khuyên dùng khi giao cho khách hàng)
+## Cài trên máy đồng nghiệp
+
+Gửi cho đồng nghiệp file `MondiroToolbox-<version>-setup.exe` (lấy ở mục **Releases** của repo trên GitHub).
+Họ cài một lần, mở app và nhập key là dùng được. Từ đó về sau app tự cập nhật.
+
+## Đóng gói thử trên máy mình
 
 ```
-npm run dist
+npm run dist          # build file Setup .exe
+npm run dist:folder   # chỉ build ra thư mục (nhanh, để test)
 ```
 
-File installer sẽ nằm trong thư mục `dist/` (dạng `Mondiro Toolbox Setup x.x.x.exe`). Chạy file này
-để cài, app sẽ nằm cố định trong Program Files, có shortcut Start Menu, pin taskbar hoạt động bình thường.
+File nằm trong thư mục `dist/`.
+
+## Phát hành bản mới (tự động cập nhật)
+
+1. Sửa code, đổi `"version"` trong `package.json` (ví dụ `1.1.0` → `1.1.1`).
+2. Ghi nội dung muốn hiện trong bảng thông báo cập nhật vào `release-notes.md`:
+   ```
+   # v1.1.1
+   - Thêm tính năng ...
+   ```
+   Tiêu đề phải trùng version, nếu không GitHub sẽ không build.
+3. Push lên nhánh `main`.
+
+GitHub Actions sẽ tự build `MondiroToolbox-<version>-setup.exe` và đăng lên mục **Releases** (khoảng 5–10 phút, xem ở tab **Actions**).
+App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng, tự tải về, rồi hỏi
+"Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
+Máy cài mới thì lần đầu mở app (sau khi nhập key) sẽ hiện bảng chào mừng với nội dung `release-notes.md` của bản đó, chỉ hiện 1 lần.
+Khi đang dùng bản mới nhất, cạnh số phiên bản góc trái hiện chữ **(latest)** màu xanh.
+
+> **Lưu ý:**
+> - Repo phải để **Public** thì app mới tải được bản cập nhật.
+> - Bản Toolbox cũ (1.0.0) chưa có tự cập nhật, cần cài tay bản 1.1.0 một lần.
+
+## Quản lý quyền sử dụng (key)
+
+Toolbox **dùng chung key với Spine Preview**: danh sách key nằm ở `access/keys.json` trong repo
+`Spine_Preview`. Đồng nghiệp đã có key `SPV-...` thì nhập luôn key đó vào Toolbox.
+Thu hồi hoặc xóa key ở bảng Admin (của Spine Preview hoặc của Toolbox, giống nhau) sẽ khóa cả 2 app.
+
+- Mở bảng Admin bằng phím tắt riêng (giống Spine Preview) → dán GitHub token có quyền ghi vào repo
+  `Spine_Preview` (dùng lại token đã tạo cho Spine Preview được) → **Đăng nhập Admin**.
+  Lần đầu dùng Toolbox cần đăng nhập Admin một lần trên Toolbox, vì token được mã hóa riêng cho từng app.
+- Key chỉ hiện được trên app đã tạo ra nó. Key tạo trong Spine Preview sẽ báo "Key không lưu trên
+  máy này" khi xem trong Toolbox, nhưng vẫn dùng được bình thường.
+- Sau khi thu hồi hoặc xóa, máy kia bị khóa trong khoảng **15–20 phút** (hoặc ngay lần mở app tiếp theo).
+- Mất mạng thì máy đã kích hoạt vẫn dùng được thêm **7 ngày**.
 
 ## Icon app
 
@@ -53,6 +93,11 @@ Nếu bạn có logo riêng, chỉ cần thay 2 file này (giữ nguyên tên, `
 
 ```
 main.js              — tiến trình chính Electron, tạo cửa sổ app
+license.js           — kiểm tra key (danh sách chung với Spine Preview), bảng Admin
+updater.js           — tự động cập nhật từ GitHub Releases
+renderer/license-ui.js — màn hình nhập key, bảng Admin, nút cập nhật
+release-notes.md     — nội dung bảng thông báo cập nhật của bản sắp phát hành
+.github/workflows/release.yml — tự build và đăng bản mới khi đổi version
 lib/imaging.js        — toàn bộ xử lý ảnh (blur, crop, resize) bằng Jimp
 renderer/index.html    — giao diện (sidebar + 6 tab nội dung)
 renderer/styles.css    — style (dark theme, bo góc, đồng bộ mockup)
