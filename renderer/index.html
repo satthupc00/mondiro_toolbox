@@ -189,6 +189,13 @@
       <section class="tab-panel" data-panel="frames" hidden style="height:100%;">
         <div class="fv-wrap">
           <div class="fv-body">
+            <div class="fv-playlist" id="fvPlaylist" hidden>
+              <div class="fv-pl-head">
+                <span>Playlist <span class="fv-pl-total" id="fvPlaylistCount">0</span></span>
+                <button class="fv-pl-clear" id="fvPlaylistClear" type="button" title="Xóa hết playlist">Xóa hết</button>
+              </div>
+              <div class="fv-pl-items" id="fvPlaylistItems"></div>
+            </div>
             <div class="fv-stage" id="fvStage">
               <div class="fv-fps-presets" id="fvFpsPresets">
                 <button class="fv-fps-btn" data-fps="30" type="button">30</button>
@@ -207,13 +214,6 @@
                   <span>Kéo thả chuỗi hình vào đây</span>
                 </div>
               </div>
-            </div>
-            <div class="fv-playlist" id="fvPlaylist" hidden>
-              <div class="fv-pl-head">
-                <span>Playlist <span class="fv-pl-total" id="fvPlaylistCount">0</span></span>
-                <button class="fv-pl-clear" id="fvPlaylistClear" type="button" title="Xóa hết playlist">Xóa hết</button>
-              </div>
-              <div class="fv-pl-items" id="fvPlaylistItems"></div>
             </div>
           </div>
           <div class="fv-controls">
