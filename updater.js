@@ -20,15 +20,38 @@ function compareVersions(a, b) {
 
 // true = this copy is the newest release, false = a newer one exists, null = couldn't tell
 // (offline). Reads the same latest.yml the updater uses, so it also works when run with npm start.
-ipcMain.handle('check-latest', async () => {
+async function fetchLatestVersion() {
   try {
     const res = await net.fetch(`${LATEST_YML}?t=${Date.now()}`, { cache: 'no-store' });
-    if (!res.ok) return { result: null };
+    if (!res.ok) return null;
     const m = (await res.text()).match(/^version:\s*['"]?([\d.]+)/m);
-    return { result: m ? compareVersions(app.getVersion(), m[1]) >= 0 : null };
+    return m ? m[1] : null;
   } catch (e) {
-    return { result: null };
+    return null;
   }
+}
+
+ipcMain.handle('check-latest', async () => {
+  const latest = await fetchLatestVersion();
+  return { result: latest ? compareVersions(app.getVersion(), latest) >= 0 : null };
+});
+
+// Set by initUpdater in the installed app; null when run with npm start.
+let updater = null;
+
+// "Kiểm tra cập nhật" button. Answers with what the button should tell the user:
+// latest | downloading | ready | dev (newer exists but this copy can't self-update) | offline.
+ipcMain.handle('update-check-now', async () => {
+  const latest = await fetchLatestVersion();
+  if (!latest) return { result: { state: 'offline' } };
+  if (compareVersions(app.getVersion(), latest) >= 0) return { result: { state: 'latest', version: app.getVersion() } };
+  if (!updater) return { result: { state: 'dev', version: latest } };
+  if (updater.downloadedVersion() === latest) {
+    updater.askInstall();
+    return { result: { state: 'ready', version: latest } };
+  }
+  updater.check();
+  return { result: { state: 'downloading', version: latest } };
 });
 
 function notesToText(notes) {
@@ -48,17 +71,15 @@ function initUpdater(getWindow) {
     if (win && !win.isDestroyed()) win.webContents.send('update-status', status);
   };
   const install = () => autoUpdater.quitAndInstall(true, true);
+  let downloaded = null; // info of the update already downloaded, waiting for a restart
 
-  autoUpdater.on('update-available', info => send({ state: 'downloading', version: info.version, percent: 0 }));
-  autoUpdater.on('download-progress', p => send({ state: 'downloading', percent: Math.round(p.percent) }));
-  autoUpdater.on('update-downloaded', async info => {
-    send({ state: 'ready', version: info.version });
-    const win = getWindow();
-    const notes = notesToText(info.releaseNotes);
-    const { response } = await dialog.showMessageBox(win, {
+  const askInstall = async () => {
+    if (!downloaded) return;
+    const notes = notesToText(downloaded.releaseNotes);
+    const { response } = await dialog.showMessageBox(getWindow(), {
       type: 'info',
       title: 'Có bản cập nhật',
-      message: `Mondiro Toolbox v${info.version} đã tải xong`,
+      message: `Mondiro Toolbox v${downloaded.version} đã tải xong`,
       detail: (notes ? notes + '\n\n' : '') + 'Khởi động lại app để cập nhật ngay?',
       buttons: ['Cập nhật ngay', 'Để sau'],
       defaultId: 0,
@@ -66,6 +87,14 @@ function initUpdater(getWindow) {
       noLink: true
     });
     if (response === 0) install();
+  };
+
+  autoUpdater.on('update-available', info => send({ state: 'downloading', version: info.version, percent: 0 }));
+  autoUpdater.on('download-progress', p => send({ state: 'downloading', percent: Math.round(p.percent) }));
+  autoUpdater.on('update-downloaded', info => {
+    downloaded = info;
+    send({ state: 'ready', version: info.version });
+    askInstall();
   });
   autoUpdater.on('error', err => {
     console.warn('[updater]', err && err.message);
@@ -75,6 +104,7 @@ function initUpdater(getWindow) {
   ipcMain.on('update-install', install);
 
   const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  updater = { check, askInstall, downloadedVersion: () => downloaded && downloaded.version };
   setTimeout(check, 3000);
   setInterval(check, CHECK_EVERY_MS);
 }

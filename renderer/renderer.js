@@ -567,6 +567,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const MAX_SCAN_DEPTH = 6; // folder con long nhau toi da bao nhieu cap
   let playlist = []; // [{ id, label, group, dir, frames: [{filePath, num, fileName}] }]
   let current = null; // phan tu dang xem trong playlist | null
+  let preloaded = []; // Image da tai san cua chuoi dang xem (cung thu tu voi current.frames)
+  let stageImg = null; // 1 the <img> co dinh tren stage, chi doi src khi chuyen khung
   let currentIndex = 0;
   let playing = false;
   let timer = null;
@@ -592,6 +594,9 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
       <span>Kéo thả 1 hoặc nhiều folder chuỗi hình vào đây<br>(hoặc kéo thẳng các file ảnh)</span>
     </div>`;
+
+  // pathToFileURL ma hoa dung dau cach, #, % ... trong duong dan Windows.
+  const fileUrl = (p) => require("url").pathToFileURL(p).href;
 
   function splitName(base) {
     const m = base.match(/^(.*?)[-_\s]?(\d+)$/);
@@ -684,6 +689,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     stopPlaying();
     current = sq;
     currentIndex = 0;
+    // Tai truoc ca chuoi: anh FX lon ma doi tai luc dang play thi khung xem bi trong.
+    preloaded = sq.frames.map((f) => { const im = new Image(); im.src = fileUrl(f.filePath); return im; });
     scrubEl.max = Math.max(0, sq.frames.length - 1);
     scrubEl.value = 0;
     renderPlaylist();
@@ -698,6 +705,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     if (current && current.id === id) {
       stopPlaying();
       current = null;
+      preloaded = [];
       const next = playlist[Math.min(idx, playlist.length - 1)];
       if (next) { selectSequence(next.id); return; }
       renderFrame();
@@ -709,6 +717,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     stopPlaying();
     playlist = [];
     current = null;
+    preloaded = [];
     currentIndex = 0;
     renderPlaylist();
     renderFrame();
@@ -716,13 +725,20 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   playlistClearBtn.addEventListener("click", clearPlaylist);
 
   function renderPlaylist() {
-    playlistEl.hidden = playlist.length === 0;
     playlistCountEl.textContent = playlist.length;
+    playlistClearBtn.disabled = playlist.length === 0;
     playlistItemsEl.innerHTML = "";
+    if (!playlist.length) {
+      const empty = document.createElement("div");
+      empty.className = "fv-pl-empty";
+      empty.textContent = "Kéo thả 1 hoặc nhiều folder ảnh vào đây";
+      playlistItemsEl.appendChild(empty);
+      return;
+    }
     for (const sq of playlist) {
       const row = document.createElement("div");
       row.className = "fv-pl-item" + (current && current.id === sq.id ? " active" : "");
-      row.title = sq.dir;
+      row.title = `${sq.label}\n${sq.dir}`;
       const name = document.createElement("span");
       name.className = "fv-pl-name";
       name.textContent = sq.label;
@@ -755,10 +771,18 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     currentIndex = Math.max(0, Math.min(currentIndex, frames.length - 1));
     const f = frames[currentIndex];
 
-    stageContentEl.innerHTML = "";
-    const img = document.createElement("img");
-    img.src = "file://" + f.filePath;
-    stageContentEl.appendChild(img);
+    if (!stageImg || !stageContentEl.contains(stageImg)) {
+      stageContentEl.innerHTML = "";
+      stageImg = document.createElement("img");
+      stageContentEl.appendChild(stageImg);
+    }
+    // Khung chua tai xong thi giu khung dang hien, khong de stage bi trong.
+    const pre = preloaded[currentIndex];
+    const url = fileUrl(f.filePath);
+    if (stageImg.dataset.src !== url && (!stageImg.dataset.src || !pre || pre.complete)) {
+      stageImg.src = url;
+      stageImg.dataset.src = url;
+    }
 
     metaEl.textContent = `${current.label} · ${frames.length} khung · ${f.fileName}`;
   }
@@ -896,6 +920,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     }
   });
 
+  renderPlaylist();
   renderFrame();
 
   // expose for internal test harness (headless smoke test)

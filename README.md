@@ -46,6 +46,7 @@ GitHub Actions sẽ tự build `MondiroToolbox-<version>-setup.exe` và đăng l
 App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng, tự tải về, rồi hỏi
 "Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
 Máy cài mới thì lần đầu mở app (sau khi nhập key) sẽ hiện bảng chào mừng với nội dung `release-notes.md` của bản đó, chỉ hiện 1 lần.
+Muốn kiểm tra ngay thì bấm nút **Kiểm tra cập nhật** ở góc dưới bên trái app.
 Khi đang dùng bản mới nhất, cạnh số phiên bản góc trái hiện chữ **(latest)** màu xanh.
 
 > **Lưu ý:**
@@ -87,7 +88,7 @@ Nếu bạn có logo riêng, chỉ cần thay 2 file này (giữ nguyên tên, `
 - **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
   ... `walk_23.png`). App quét cả folder con, mỗi chuỗi ảnh thành 1 dòng trong **Playlist** bên trái
   (folder có nhiều chuỗi khác tên thì hiện `tên folder / tên chuỗi`). Click tên nào thì play chuỗi đó.
-  Thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
+  Playlist luôn hiện sẵn, thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
   Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, Ping-pong.
   Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong.
 

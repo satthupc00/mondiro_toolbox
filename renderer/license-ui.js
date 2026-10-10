@@ -115,6 +115,28 @@
   });
   updatePill.addEventListener('click', () => ipcRenderer.send('update-install'));
 
+  // ---- bottom-left of the sidebar: "Kiểm tra cập nhật" ----
+  const checkBtn = document.getElementById('checkUpdateBtn');
+  const checkLabel = checkBtn && checkBtn.querySelector('span');
+  const CHECK_TEXT = {
+    latest: v => `Bạn đang dùng bản mới nhất (v${v}).`,
+    downloading: v => `Có bản mới v${v}, đang tải về... Tải xong app sẽ hỏi khởi động lại.`,
+    ready: v => `Bản v${v} đã tải xong.`,
+    dev: v => `Có bản mới v${v} (bản chạy thử không tự cập nhật được).`,
+    offline: () => 'Không kiểm tra được, hãy kiểm tra kết nối mạng.'
+  };
+  if (checkBtn) checkBtn.addEventListener('click', async () => {
+    if (checkBtn.disabled) return;
+    checkBtn.disabled = true;
+    checkLabel.textContent = 'Đang kiểm tra...';
+    let res;
+    try { res = await call('update-check-now'); } catch (e) { res = { state: 'offline' }; }
+    checkLabel.textContent = 'Kiểm tra cập nhật';
+    checkBtn.disabled = false;
+    if (res.state === 'latest') latestTag.hidden = false;
+    window.toast((CHECK_TEXT[res.state] || CHECK_TEXT.offline)(res.version));
+  });
+
   // ---- Admin panel ----
   const adminBody = el('div', { class: 'admin-body' });
   const adminMsg = el('div', { class: 'admin-msg' });
