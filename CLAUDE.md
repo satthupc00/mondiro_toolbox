@@ -4,15 +4,11 @@ Chủ repo (Mondiro) là artist, không phải lập trình viên. Trả lời b
 
 ## Phiên bản và phát hành
 
-- **Không tự ý tăng `version` trong `package.json`.** Chỉ tăng khi Mondiro nói rõ là nâng version.
-  Sửa code mà không được dặn nâng version thì chỉ commit và push, không phát hành bản mới.
-- Khi nâng version, nội dung bảng thông báo cập nhật lấy từ `release-notes.md`
-  (tiêu đề `# v<version>` + các dòng bên dưới). **Chỉ ghi đúng những dòng Mondiro note**,
-  không tự viết thêm và không chép commit message vào.
-- Nếu Mondiro dặn nâng version mà chưa đưa nội dung note, **phải hỏi lại** muốn ghi gì
-  trước khi sửa `release-notes.md` và push.
-- Đổi `version` (hoặc `release-notes.md`) rồi push lên `main` thì GitHub Actions sẽ tự build và phát hành.
-  App đã cài sẽ tự cập nhật.
+- Sửa xong thì **tự nâng `version` trong `package.json`** (Mondiro đã cho phép), merge lên `main` là
+  GitHub Actions tự build và phát hành, app đã cài sẽ tự cập nhật.
+  Sửa lỗi nhỏ: tăng số cuối (1.3.0 → 1.3.1). Thêm tính năng: tăng số giữa (1.3.1 → 1.4.0).
+- **Không có ghi chú phát hành**: app không hiện số version, không hiện release notes hay bảng chào mừng.
+  Chỉ hiện chữ `latest` màu xanh dưới tên app khi đang dùng bản mới nhất.
 
 ## Key
 
@@ -22,5 +18,5 @@ Chủ repo (Mondiro) là artist, không phải lập trình viên. Trả lời b
 
 ## Bí mật
 
-- Không ghi phím tắt mở bảng Admin vào bất kỳ file công khai nào (README, release notes, commit message).
+- Không ghi phím tắt mở bảng Admin vào bất kỳ file công khai nào (README, commit message, mô tả PR).
   Repo để Public.

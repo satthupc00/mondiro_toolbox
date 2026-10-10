@@ -20,15 +20,12 @@
     return node;
   };
 
-  // ---- version in brand + title ----
-  const version = ipcRenderer.sendSync('get-app-version');
+  // ---- brand: no version number, only "latest" while this copy is the newest release ----
   const versionEl = document.getElementById('appVersion');
-  if (versionEl) versionEl.textContent = `v${version}`;
-  document.title = `Mondiro Toolbox v${version}`;
 
-  // "(latest)" in green after the version while this copy is the newest release on GitHub.
-  const latestTag = el('span', { class: 'brand-latest', text: '(latest)', hidden: '' });
-  if (versionEl) versionEl.after(latestTag);
+  // "latest" in green under the name while this copy is the newest release on GitHub.
+  const latestTag = el('span', { class: 'brand-latest', text: 'latest', hidden: '' });
+  if (versionEl) versionEl.append(latestTag);
   const refreshLatest = async () => {
     try {
       const latest = await call('check-latest');
@@ -54,7 +51,7 @@
   const lockOverlay = el('div', { id: 'lock-overlay' }, [
     el('div', { class: 'lock-card' }, [
       el('div', { class: 'lock-brand' }, [el('span', { class: 'brand-red', text: 'Mondiro' }), el('span', { class: 'brand-white', text: ' Toolbox' })]),
-      el('div', { class: 'lock-sub', text: `Bộ tool xử lý ảnh & Spine · v${version}` }),
+      el('div', { class: 'lock-sub', text: 'Bộ tool xử lý ảnh & Spine' }),
       lockMsg,
       keyForm
     ]),
@@ -65,7 +62,6 @@
   function applyStatus(status) {
     if (status && status.ok) {
       lockOverlay.hidden = true;
-      ipcRenderer.invoke('show-welcome').catch(() => {});
       return;
     }
     lockOverlay.hidden = false;
@@ -98,16 +94,15 @@
   ipcRenderer.on('update-status', (_e, s) => {
     if (s.state !== 'error') latestTag.hidden = true;
     if (s.state === 'downloading') {
-      if (s.version) updatePill.dataset.version = s.version;
       updatePill.hidden = false;
       updatePill.disabled = true;
       updatePill.classList.remove('ready');
-      updatePill.textContent = `Đang tải v${updatePill.dataset.version || ''}… ${s.percent || 0}%`;
+      updatePill.textContent = `Đang tải bản mới… ${s.percent || 0}%`;
     } else if (s.state === 'ready') {
       updatePill.hidden = false;
       updatePill.disabled = false;
       updatePill.classList.add('ready');
-      updatePill.textContent = `Cập nhật v${s.version} ↻`;
+      updatePill.textContent = 'Cập nhật ↻';
       updatePill.title = 'Khởi động lại app để cài bản mới';
     } else if (s.state === 'error' && !updatePill.classList.contains('ready')) {
       updatePill.hidden = true;
@@ -119,10 +114,10 @@
   const checkBtn = document.getElementById('checkUpdateBtn');
   const checkLabel = checkBtn && checkBtn.querySelector('span');
   const CHECK_TEXT = {
-    latest: v => `Bạn đang dùng bản mới nhất (v${v}).`,
-    downloading: v => `Có bản mới v${v}, đang tải về... Tải xong app sẽ hỏi khởi động lại.`,
-    ready: v => `Bản v${v} đã tải xong.`,
-    dev: v => `Có bản mới v${v} (bản chạy thử không tự cập nhật được).`,
+    latest: () => 'Bạn đang dùng bản mới nhất.',
+    downloading: () => 'Có bản mới, đang tải về... Tải xong app sẽ hỏi khởi động lại.',
+    ready: () => 'Bản mới đã tải xong.',
+    dev: () => 'Có bản mới (bản chạy thử không tự cập nhật được).',
     offline: () => 'Không kiểm tra được, hãy kiểm tra kết nối mạng.'
   };
   if (checkBtn) checkBtn.addEventListener('click', async () => {

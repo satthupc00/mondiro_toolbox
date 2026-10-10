@@ -33,25 +33,15 @@ File nằm trong thư mục `dist/`.
 
 ## Phát hành bản mới (tự động cập nhật)
 
-1. Sửa code, đổi `"version"` trong `package.json` (ví dụ `1.1.0` → `1.1.1`).
-2. Ghi nội dung muốn hiện trong bảng thông báo cập nhật vào `release-notes.md`:
-   ```
-   # v1.1.1
-   - Thêm tính năng ...
-   ```
-   Tiêu đề phải trùng version, nếu không GitHub sẽ không build.
-3. Push lên nhánh `main`.
-
+Đổi `"version"` trong `package.json` (ví dụ `1.3.0` → `1.3.1`) rồi push lên nhánh `main`.
 GitHub Actions sẽ tự build `MondiroToolbox-<version>-setup.exe` và đăng lên mục **Releases** (khoảng 5–10 phút, xem ở tab **Actions**).
-App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng, tự tải về, rồi hỏi
-"Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
-Máy cài mới thì lần đầu mở app (sau khi nhập key) sẽ hiện bảng chào mừng với nội dung `release-notes.md` của bản đó, chỉ hiện 1 lần.
-Muốn kiểm tra ngay thì bấm nút **Kiểm tra cập nhật** ở góc dưới bên trái app.
-Khi đang dùng bản mới nhất, cạnh số phiên bản góc trái hiện chữ **(latest)** màu xanh.
+App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng (hoặc khi bấm nút **Kiểm tra cập nhật**
+ở góc dưới bên trái), tự tải về, rồi hỏi "Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
+App không hiện số version, chỉ hiện chữ **latest** màu xanh dưới tên app khi đang dùng bản mới nhất.
 
 > **Lưu ý:**
 > - Repo phải để **Public** thì app mới tải được bản cập nhật.
-> - Bản Toolbox cũ (1.0.0) chưa có tự cập nhật, cần cài tay bản 1.1.0 một lần.
+> - Bản Toolbox cũ (1.0.0) chưa có tự cập nhật, cần cài tay bản mới một lần.
 
 ## Quản lý quyền sử dụng (key)
 
@@ -99,7 +89,6 @@ main.js              — tiến trình chính Electron, tạo cửa sổ app
 license.js           — kiểm tra key (danh sách chung với Spine Preview), bảng Admin
 updater.js           — tự động cập nhật từ GitHub Releases
 renderer/license-ui.js — màn hình nhập key, bảng Admin, nút cập nhật
-release-notes.md     — nội dung bảng thông báo cập nhật của bản sắp phát hành
 .github/workflows/release.yml — tự build và đăng bản mới khi đổi version
 lib/imaging.js        — toàn bộ xử lý ảnh (blur, crop, resize) bằng Jimp
 renderer/index.html    — giao diện (sidebar + 6 tab nội dung)
