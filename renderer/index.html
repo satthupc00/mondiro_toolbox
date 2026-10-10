@@ -188,23 +188,32 @@
       <!-- FBF VIEWER -->
       <section class="tab-panel" data-panel="frames" hidden style="height:100%;">
         <div class="fv-wrap">
-          <div class="fv-stage" id="fvStage">
-            <div class="fv-fps-presets" id="fvFpsPresets">
-              <button class="fv-fps-btn" data-fps="30" type="button">30</button>
-              <button class="fv-fps-btn" data-fps="15" type="button">15</button>
-              <button class="fv-fps-btn" data-fps="12" type="button">12</button>
-            </div>
-            <div class="fv-speed-presets" id="fvSpeedPresets">
-              <button class="fv-fps-btn" data-speed="1" type="button">x1</button>
-              <button class="fv-fps-btn" data-speed="2" type="button">x2</button>
-              <button class="fv-fps-btn" data-speed="3" type="button">x3</button>
-              <button class="fv-fps-btn" data-speed="4" type="button">x4</button>
-            </div>
-            <div class="fv-stage-content" id="fvStageContent">
-              <div class="fv-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-                <span>Kéo thả chuỗi hình vào đây</span>
+          <div class="fv-body">
+            <div class="fv-stage" id="fvStage">
+              <div class="fv-fps-presets" id="fvFpsPresets">
+                <button class="fv-fps-btn" data-fps="30" type="button">30</button>
+                <button class="fv-fps-btn" data-fps="15" type="button">15</button>
+                <button class="fv-fps-btn" data-fps="12" type="button">12</button>
               </div>
+              <div class="fv-speed-presets" id="fvSpeedPresets">
+                <button class="fv-fps-btn" data-speed="1" type="button">x1</button>
+                <button class="fv-fps-btn" data-speed="2" type="button">x2</button>
+                <button class="fv-fps-btn" data-speed="3" type="button">x3</button>
+                <button class="fv-fps-btn" data-speed="4" type="button">x4</button>
+              </div>
+              <div class="fv-stage-content" id="fvStageContent">
+                <div class="fv-empty">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                  <span>Kéo thả chuỗi hình vào đây</span>
+                </div>
+              </div>
+            </div>
+            <div class="fv-playlist" id="fvPlaylist" hidden>
+              <div class="fv-pl-head">
+                <span>Playlist <span class="fv-pl-total" id="fvPlaylistCount">0</span></span>
+                <button class="fv-pl-clear" id="fvPlaylistClear" type="button" title="Xóa hết playlist">Xóa hết</button>
+              </div>
+              <div class="fv-pl-items" id="fvPlaylistItems"></div>
             </div>
           </div>
           <div class="fv-controls">
@@ -214,7 +223,7 @@
             <button class="fv-toggle-btn" id="fvPingPongBtn" type="button" title="Tự động đảo chiều khi hết chuỗi (ping-pong loop)">⇄ Ping-pong</button>
           </div>
           <div class="fv-meta" id="fvMeta"></div>
-          <p class="fv-hint">Delete để xoá chuỗi đang xem · Space để Play/Stop · P để bật/tắt Ping-pong · nút x1/x2/x3/x4 góc phải để chỉnh tốc độ Play</p>
+          <p class="fv-hint">Kéo nhiều folder cùng lúc để tạo playlist, click tên để play · ↑/↓ để chuyển chuỗi · Delete để bỏ chuỗi đang xem · Space để Play/Stop · P để bật/tắt Ping-pong · nút x1/x2/x3/x4 góc phải để chỉnh tốc độ Play</p>
         </div>
       </section>
 

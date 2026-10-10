@@ -84,10 +84,12 @@ Nếu bạn có logo riêng, chỉ cần thay 2 file này (giữ nguyên tên, `
 - **Rename** — đổi tên hàng loạt, hậu tố `##` để tự đánh số thứ tự.
 - **Resize** — scale hàng loạt theo % hoặc theo pixel (chỉ cần nhập Rộng hoặc Cao, chiều còn lại
   tự tính theo đúng tỉ lệ ảnh gốc của từng file), ghi đè trực tiếp lên file gốc.
-- **FBF Viewer** — kéo thả 1 chuỗi ảnh (vd `walk_00.png` ... `walk_23.png`) để xem preview
-  frame-by-frame: Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh
-  30/15/12). Mỗi lần chỉ xem 1 chuỗi — thả chuỗi mới sẽ thay thế chuỗi đang xem.
-  Phím tắt: Delete để xoá chuỗi đang xem, Space để Play/Stop.
+- **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
+  ... `walk_23.png`). App quét cả folder con, mỗi chuỗi ảnh thành 1 dòng trong **Playlist** bên phải
+  (folder có nhiều chuỗi khác tên thì hiện `tên folder / tên chuỗi`). Click tên nào thì play chuỗi đó.
+  Thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
+  Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, Ping-pong.
+  Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong.
 
 ## Cấu trúc thư mục
 
