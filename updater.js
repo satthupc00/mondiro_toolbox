@@ -54,12 +54,6 @@ ipcMain.handle('update-check-now', async () => {
   return { result: { state: 'downloading', version: latest } };
 });
 
-function notesToText(notes) {
-  if (!notes) return '';
-  const raw = Array.isArray(notes) ? notes.map(n => n.note || '').join('\n') : String(notes);
-  return raw.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|li|h\d)>/gi, '\n').replace(/<[^>]+>/g, '').trim();
-}
-
 function initUpdater(getWindow) {
   if (!app.isPackaged) return;
   const { autoUpdater } = require('electron-updater');
@@ -75,12 +69,11 @@ function initUpdater(getWindow) {
 
   const askInstall = async () => {
     if (!downloaded) return;
-    const notes = notesToText(downloaded.releaseNotes);
     const { response } = await dialog.showMessageBox(getWindow(), {
       type: 'info',
       title: 'Có bản cập nhật',
-      message: `Mondiro Toolbox v${downloaded.version} đã tải xong`,
-      detail: (notes ? notes + '\n\n' : '') + 'Khởi động lại app để cập nhật ngay?',
+      message: 'Bản mới của Mondiro Toolbox đã tải xong',
+      detail: 'Khởi động lại app để cập nhật ngay?',
       buttons: ['Cập nhật ngay', 'Để sau'],
       defaultId: 0,
       cancelId: 1,

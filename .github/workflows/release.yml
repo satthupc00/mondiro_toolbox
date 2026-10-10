@@ -5,7 +5,7 @@ name: Release
 on:
   push:
     branches: [main]
-    paths: [package.json, release-notes.md, .github/workflows/release.yml]
+    paths: [package.json, .github/workflows/release.yml]
   workflow_dispatch:
 
 permissions:
@@ -44,21 +44,18 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      # Fails the build if release-notes.md isn't written for this version.
-      - run: node scripts/release-notes.js
       # Build only; the release is created below with gh. Letting electron-builder create the
       # release itself failed with "Published releases must have a valid tag" (422).
-      # bash, not the default PowerShell, which mangles the -c.releaseInfo... argument
-      - run: npx electron-builder --win nsis --x64 --publish never -c.releaseInfo.releaseNotesFile=build/release-notes.md
+      - run: npx electron-builder --win nsis --x64 --publish never
         shell: bash
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       # Removes a half-finished release of this version (if any), then publishes the installer,
-      # its blockmap and latest.yml. The notes also go on the release page.
+      # its blockmap and latest.yml.
       - run: |
           V="v${{ needs.check.outputs.version }}"
           gh release delete "$V" --cleanup-tag -y || true
-          gh release create "$V" --target "$GITHUB_SHA" --title "$V" --notes-file build/release-notes.md \
+          gh release create "$V" --target "$GITHUB_SHA" --title "$V" --notes "" \
             dist/*-setup.exe dist/*-setup.exe.blockmap dist/latest.yml
         shell: bash
         env:
