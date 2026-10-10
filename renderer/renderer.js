@@ -559,17 +559,24 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 })();
 
 // ============================================================
-// FBF VIEWER — xem 1 chuoi anh duy nhat tai 1 thoi diem (don gian hoa theo yeu cau Mondiro)
+// FBF VIEWER — playlist nhieu chuoi anh: tha 1 hoac nhieu folder (hoac file anh) vao,
+// app quet ra tung chuoi va liet ke ben phai; click ten nao thi play chuoi do.
 // ============================================================
 (function initFrames() {
   const VALID_EXT = [".png", ".jpg", ".jpeg"];
-  let current = null; // { group, dir, frames: [{filePath, num, fileName}] } | null
+  const MAX_SCAN_DEPTH = 6; // folder con long nhau toi da bao nhieu cap
+  let playlist = []; // [{ id, label, group, dir, frames: [{filePath, num, fileName}] }]
+  let current = null; // phan tu dang xem trong playlist | null
   let currentIndex = 0;
   let playing = false;
   let timer = null;
 
   const stageEl = document.getElementById("fvStage");
   const stageContentEl = document.getElementById("fvStageContent");
+  const playlistEl = document.getElementById("fvPlaylist");
+  const playlistItemsEl = document.getElementById("fvPlaylistItems");
+  const playlistCountEl = document.getElementById("fvPlaylistCount");
+  const playlistClearBtn = document.getElementById("fvPlaylistClear");
   const fpsPresetsEl = document.getElementById("fvFpsPresets");
   const speedPresetsEl = document.getElementById("fvSpeedPresets");
   const playBtn = document.getElementById("fvPlayBtn");
@@ -583,7 +590,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const EMPTY_HTML = `
     <div class="fv-empty">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-      <span>Kéo thả chuỗi hình vào đây</span>
+      <span>Kéo thả 1 hoặc nhiều folder chuỗi hình vào đây<br>(hoặc kéo thẳng các file ảnh)</span>
     </div>`;
 
   function splitName(base) {
@@ -592,58 +599,148 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     return { group: base, num: 0 };
   }
 
-  setupDropzoneVisuals(stageEl);
-  stageEl.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files || []);
-    handleDropped(files);
-  });
+  for (const el of [stageEl, playlistEl]) {
+    setupDropzoneVisuals(el);
+    el.addEventListener("drop", (e) => {
+      e.preventDefault();
+      handleDropped(Array.from(e.dataTransfer.files || []));
+    });
+  }
 
   function handleDropped(files) {
-    const raw = [];
+    const paths = [];
     for (const f of files) {
       const filePath = getFilePath(f);
-      if (!filePath) continue;
-      raw.push({ name: f.name, filePath });
+      if (filePath) paths.push(filePath);
     }
+    return handleDroppedPaths(paths);
+  }
+
+  /** Quet cac duong dan duoc tha vao (folder hoac file) thanh danh sach file anh [{name, filePath}]. */
+  async function collectImages(paths) {
+    const out = [];
+    async function walk(p, depth) {
+      let st;
+      try { st = await fs.promises.stat(p); } catch (e) { return; }
+      if (st.isDirectory()) {
+        if (depth > MAX_SCAN_DEPTH) return;
+        let names = [];
+        try { names = await fs.promises.readdir(p); } catch (e) { return; }
+        for (const n of names) await walk(path.join(p, n), depth + 1);
+      } else if (VALID_EXT.includes(path.extname(p).toLowerCase())) {
+        out.push({ name: path.basename(p), filePath: p });
+      }
+    }
+    for (const p of paths) await walk(p, 0);
+    return out;
+  }
+
+  async function handleDroppedPaths(paths) {
+    if (!paths.length) return;
+    metaEl.textContent = "Đang quét...";
+    const raw = await collectImages(paths);
+    metaEl.textContent = "";
     handleDroppedRaw(raw);
   }
 
-  /** Cot loi khong phu thuoc DOM File — nhan [{name, filePath}], de test headless goi truc tiep. */
+  /**
+   * Cot loi khong phu thuoc DOM File — nhan [{name, filePath}], de test headless goi truc tiep.
+   * Moi cap (folder, ten goc) la 1 chuoi trong playlist. Tha them se noi vao playlist,
+   * chuoi da co (cung folder + ten goc) thi cap nhat lai khung hinh.
+   */
   function handleDroppedRaw(rawItems) {
-    const items = [];
+    const seqs = new Map();
     for (const r of rawItems) {
       const ext = path.extname(r.name).toLowerCase();
-      if (!VALID_EXT.includes(ext)) continue;
-      const base = path.basename(r.name, ext);
-      const { group, num } = splitName(base);
-      if (!r.filePath) continue;
-      items.push({ group, num, fileName: r.name, filePath: r.filePath, dir: path.dirname(r.filePath) });
+      if (!VALID_EXT.includes(ext) || !r.filePath) continue;
+      const { group, num } = splitName(path.basename(r.name, ext));
+      const dir = path.dirname(r.filePath);
+      const id = dir + "|" + group;
+      if (!seqs.has(id)) seqs.set(id, { id, group, dir, frames: [] });
+      seqs.get(id).frames.push({ filePath: r.filePath, num, fileName: r.name });
     }
-    if (!items.length) { toast("Không tìm thấy file PNG/JPG hợp lệ."); return; }
+    if (!seqs.size) { toast("Không tìm thấy file PNG/JPG hợp lệ."); return; }
 
-    const groupsInDrop = [...new Set(items.map((i) => i.group))];
-    if (groupsInDrop.length > 1) {
-      toast(`Lượt thả này lẫn ${groupsInDrop.length} tên khác nhau. Vui lòng chỉ thả 1 chuỗi ảnh cùng tên gốc mỗi lần.`);
-      return;
+    // Folder chi co 1 chuoi thi hien ten folder; folder co nhieu chuoi thi them ten goc cho de phan biet.
+    const perDir = {};
+    for (const sq of seqs.values()) perDir[sq.dir] = (perDir[sq.dir] || 0) + 1;
+
+    for (const sq of seqs.values()) {
+      sq.frames.sort((a, b) => a.num - b.num || a.fileName.localeCompare(b.fileName));
+      const folder = path.basename(sq.dir);
+      sq.label = perDir[sq.dir] > 1 ? `${folder} / ${sq.group || "(không tên)"}` : folder;
+      const idx = playlist.findIndex((p) => p.id === sq.id);
+      if (idx >= 0) playlist[idx] = sq; else playlist.push(sq);
     }
+    playlist.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+    const firstNew = playlist.find((p) => seqs.has(p.id));
+    if (seqs.size > 1) toast(`Đã thêm ${seqs.size} chuỗi hình vào playlist.`);
+    selectSequence(firstNew.id);
+  }
 
-    const groupName = groupsInDrop[0];
-    const dirCounts = {};
-    items.forEach((i) => { dirCounts[i.dir] = (dirCounts[i.dir] || 0) + 1; });
-    const dir = Object.keys(dirCounts).sort((a, b) => dirCounts[b] - dirCounts[a])[0];
-
-    const frames = items
-      .map((it) => ({ filePath: it.filePath, num: it.num, fileName: it.fileName }))
-      .sort((a, b) => a.num - b.num || a.fileName.localeCompare(b.fileName));
-
-    // FBF Viewer chi xem 1 chuoi tai 1 thoi diem — thả chuỗi mới sẽ thay thế chuỗi cũ.
+  function selectSequence(id, autoPlay) {
+    const sq = playlist.find((p) => p.id === id);
+    if (!sq) return;
     stopPlaying();
-    current = { group: groupName, dir, frames };
+    current = sq;
     currentIndex = 0;
-    scrubEl.max = Math.max(0, frames.length - 1);
+    scrubEl.max = Math.max(0, sq.frames.length - 1);
     scrubEl.value = 0;
+    renderPlaylist();
     renderFrame();
+    if (autoPlay) startPlaying();
+  }
+
+  function removeSequence(id) {
+    const idx = playlist.findIndex((p) => p.id === id);
+    if (idx < 0) return;
+    playlist.splice(idx, 1);
+    if (current && current.id === id) {
+      stopPlaying();
+      current = null;
+      const next = playlist[Math.min(idx, playlist.length - 1)];
+      if (next) { selectSequence(next.id); return; }
+      renderFrame();
+    }
+    renderPlaylist();
+  }
+
+  function clearPlaylist() {
+    stopPlaying();
+    playlist = [];
+    current = null;
+    currentIndex = 0;
+    renderPlaylist();
+    renderFrame();
+  }
+  playlistClearBtn.addEventListener("click", clearPlaylist);
+
+  function renderPlaylist() {
+    playlistEl.hidden = playlist.length === 0;
+    playlistCountEl.textContent = playlist.length;
+    playlistItemsEl.innerHTML = "";
+    for (const sq of playlist) {
+      const row = document.createElement("div");
+      row.className = "fv-pl-item" + (current && current.id === sq.id ? " active" : "");
+      row.title = sq.dir;
+      const name = document.createElement("span");
+      name.className = "fv-pl-name";
+      name.textContent = sq.label;
+      const count = document.createElement("span");
+      count.className = "fv-pl-count";
+      count.textContent = sq.frames.length;
+      const del = document.createElement("button");
+      del.className = "fv-pl-del";
+      del.type = "button";
+      del.textContent = "✕";
+      del.title = "Bỏ khỏi playlist";
+      del.addEventListener("click", (e) => { e.stopPropagation(); removeSequence(sq.id); });
+      row.append(name, count, del);
+      row.addEventListener("click", () => selectSequence(sq.id, true));
+      playlistItemsEl.appendChild(row);
+    }
+    const activeRow = playlistItemsEl.querySelector(".fv-pl-item.active");
+    if (activeRow) activeRow.scrollIntoView({ block: "nearest" });
   }
 
   function renderFrame() {
@@ -663,7 +760,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     img.src = "file://" + f.filePath;
     stageContentEl.appendChild(img);
 
-    metaEl.textContent = `${current.group} · ${frames.length} khung · ${f.fileName}`;
+    metaEl.textContent = `${current.label} · ${frames.length} khung · ${f.fileName}`;
   }
 
   scrubEl.addEventListener("input", () => {
@@ -787,10 +884,15 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && current) {
-      current = null;
-      currentIndex = 0;
-      stopPlaying();
-      renderFrame();
+      removeSequence(current.id);
+      return;
+    }
+    // Mui ten len/xuong: chuyen sang chuoi truoc/sau trong playlist, giu trang thai dang play.
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && playlist.length) {
+      e.preventDefault();
+      const idx = current ? playlist.indexOf(current) : -1;
+      const next = playlist[Math.max(0, Math.min(playlist.length - 1, idx + (e.key === "ArrowDown" ? 1 : -1)))];
+      if (next && next !== current) selectSequence(next.id, playing);
     }
   });
 
@@ -798,11 +900,12 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   // expose for internal test harness (headless smoke test)
   window.__fbfViewer = {
-    handleDropped, handleDroppedRaw, startPlaying, stopPlaying, setFps,
+    handleDropped, handleDroppedRaw, handleDroppedPaths, selectSequence, removeSequence, clearPlaylist, startPlaying, stopPlaying, setFps,
     setPingPong, computeVirtualLength, virtualIndexToFrameIndex, setSpeed,
     get playing() { return playing; },
     get currentIndex() { return currentIndex; },
     get current() { return current; },
+    get playlist() { return playlist; },
     get pingPong() { return pingPong; },
     get speed() { return speed; },
   };
