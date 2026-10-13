@@ -204,6 +204,7 @@ button:not(:disabled):active { transform: scale(.95); transition-duration: .06s;
 .input-suffix-wrap .input { padding-right: 30px; }
 .input-suffix { position: absolute; right: 11px; font: 600 13px var(--mono); color: var(--muted); pointer-events: none; }
 
+.replace-arrow { color: var(--faint); padding-bottom: 8px; }
 .field-hint { font-size: 11px; color: var(--faint); margin: 0 0 16px; }
 .filerow.unchanged { opacity: .45; }
 .filerow .err { color: var(--warn); margin-left: auto; font-family: "Segoe UI", sans-serif; font-size: 11px; }

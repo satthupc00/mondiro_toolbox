@@ -134,17 +134,26 @@
       <section class="tab-panel" data-panel="rename" hidden>
         <div class="mode-toggle" id="renameModeToggle">
           <button class="mode-btn active" data-mode="template" type="button">Đặt tên mới</button>
-          <button class="mode-btn" data-mode="remove" type="button">Tìm và xóa từ</button>
+          <button class="mode-btn" data-mode="replace" type="button">Tìm và thay thế</button>
         </div>
         <div id="renameTemplateFields">
           <span class="field-label">Tên mới</span>
           <input class="input" id="renameTemplate" placeholder="vd: walk_run_##" style="max-width:320px; margin-bottom:6px;">
           <p class="field-hint">Nhập hậu tố ## để tự đánh số thứ tự</p>
         </div>
-        <div id="renameRemoveFields" hidden>
-          <span class="field-label">Từ cần xóa</span>
-          <input class="input" id="renameRemoveWords" placeholder="vd: noCT, _copy" style="max-width:320px; margin-bottom:6px;">
-          <p class="field-hint">Xóa từ này ở mọi file trong danh sách có chứa nó · nhiều từ cách nhau bằng dấu phẩy · không phân biệt hoa/thường</p>
+        <div id="renameReplaceFields" hidden>
+          <div class="field-row" style="gap:12px; margin-bottom:6px;">
+            <div style="flex:1; max-width:240px;">
+              <span class="field-label">Tìm</span>
+              <input class="input" id="renameFind" placeholder="vd: noCT" spellcheck="false">
+            </div>
+            <div class="replace-arrow">→</div>
+            <div style="flex:1; max-width:240px;">
+              <span class="field-label">Thay bằng</span>
+              <input class="input" id="renameReplace" placeholder="để trống = xóa" spellcheck="false">
+            </div>
+          </div>
+          <p class="field-hint">Áp dụng cho mọi file trong danh sách có chứa chữ cần tìm · ô "Thay bằng" để trống thì xóa luôn chữ đó · không phân biệt hoa/thường</p>
         </div>
         <div class="dropzone dz-standard" id="renameDrop">
           <div class="dz-empty">
