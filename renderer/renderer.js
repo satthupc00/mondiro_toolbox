@@ -66,6 +66,17 @@ document.getElementById("searchInput").addEventListener("input", (e) => {
   });
 });
 
+// To mau do phan da keo cua moi thanh truot (ke ca khi gia tri doi tu code, vd luc dang play).
+(function paintRangeFill() {
+  document.querySelectorAll('input[type=range]').forEach((r) => {
+    const min = parseFloat(r.min) || 0;
+    const max = parseFloat(r.max) || 100;
+    const p = max > min ? ((parseFloat(r.value) - min) / (max - min)) * 100 : 0;
+    r.style.setProperty("--fill", p + "%");
+  });
+  requestAnimationFrame(paintRangeFill);
+})();
+
 function setupDropzoneVisuals(el) {
   el.addEventListener("dragenter", (e) => { e.preventDefault(); el.classList.add("dragover"); });
   el.addEventListener("dragover", (e) => e.preventDefault());

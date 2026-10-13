@@ -57,11 +57,14 @@ Thu hồi hoặc xóa key ở bảng Admin (của Spine Preview hoặc của Too
 - Sau khi thu hồi hoặc xóa, máy kia bị khóa trong khoảng **15–20 phút** (hoặc ngay lần mở app tiếp theo).
 - Mất mạng thì máy đã kích hoạt vẫn dùng được thêm **7 ngày**.
 
-## Icon app
+## Giao diện & icon
 
-Đã có sẵn icon tạm (`build/icon.ico`, `build/icon.png` — hình vuông bo góc màu xanh chữ M trắng).
-Nếu bạn có logo riêng, chỉ cần thay 2 file này (giữ nguyên tên, `.ico` nhiều size cho Windows,
-`.png` vuông ít nhất 512x512) rồi `npm run dist` lại.
+Giao diện theo chuẩn chung của các app Mondiro (m-skill): header có icon + **Mondiro** đỏ + tên app trắng
+và dòng mô tả, sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
+Màu nhấn đỏ `#E5383B`, font Segoe UI, có hiệu ứng chuyển động nhẹ cho nút/danh sách/thanh trượt.
+
+Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ). `build/icon.png` (512px) và
+`build/icon.ico` (16–256px) được xuất từ file này. Muốn đổi icon thì thay 3 file đó.
 
 ## Các tool bên trong
 

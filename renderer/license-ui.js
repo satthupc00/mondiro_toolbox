@@ -51,7 +51,7 @@
   const lockOverlay = el('div', { id: 'lock-overlay' }, [
     el('div', { class: 'lock-card' }, [
       el('div', { class: 'lock-brand' }, [el('span', { class: 'brand-red', text: 'Mondiro' }), el('span', { class: 'brand-white', text: ' Toolbox' })]),
-      el('div', { class: 'lock-sub', text: 'Bộ tool xử lý ảnh & Spine' }),
+      el('div', { class: 'lock-sub', text: 'Gộp các tool xử lý ảnh & Spine vào 1 app' }),
       lockMsg,
       keyForm
     ]),
@@ -89,7 +89,7 @@
 
   // ---- top-right: update pill (Admin is reached with Ctrl+Shift+M only) ----
   const updatePill = el('button', { id: 'update-pill', class: 'top-pill', hidden: '' });
-  document.body.append(el('div', { id: 'top-right-bar' }, [updatePill]));
+  (document.getElementById('topTools') || document.body).append(updatePill);
 
   ipcRenderer.on('update-status', (_e, s) => {
     if (s.state !== 'error') latestTag.hidden = true;

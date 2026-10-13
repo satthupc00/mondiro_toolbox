@@ -3,20 +3,26 @@
 <head>
 <meta charset="UTF-8">
 <title>Mondiro Toolbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="shell">
+
+<header class="top">
+  <div class="brand">
+    <img class="brand-icon" src="../build/icon.png" alt="">
+    <div class="brand-text">
+      <div class="brand-name"><span class="m">Mondiro</span> <span class="a">Toolbox</span><span id="appVersion"></span></div>
+      <div class="brand-desc">Gộp các tool xử lý ảnh &amp; Spine vào 1 app</div>
+    </div>
+  </div>
+  <div class="tools" id="topTools"></div>
+</header>
+
 <div class="app" id="app">
 
-  <div class="sidebar" id="sidebarShell">
-    <div class="sidebar-header">
-      <div class="brand-mark">M</div>
-      <div class="brand-text">
-        <div class="brand-name"><span class="brand-word">Mondiro</span><span class="brand-word-2">Toolbox</span></div>
-        <div><span id="appVersion"></span></div>
-      </div>
-    </div>
-
+  <aside class="sidebar" id="sidebarShell">
     <div class="search-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="searchInput" placeholder="Tìm tool...">
@@ -60,13 +66,8 @@
 
     <div class="sidebar-spacer"></div>
 
-    <button class="update-check-btn" id="checkUpdateBtn" type="button" title="Kiểm tra cập nhật">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
-      <span>Kiểm tra cập nhật</span>
-    </button>
-
-    <div class="rail-toggle" id="railToggle">‹</div>
-  </div>
+    <button class="rail-toggle" id="railToggle" type="button" title="Thu gọn / mở rộng sidebar">‹</button>
+  </aside>
 
   <main class="main">
     <div class="content-head">
@@ -228,7 +229,7 @@
             <button class="fv-toggle-btn" id="fvPingPongBtn" type="button" title="Tự động đảo chiều khi hết chuỗi (ping-pong loop)">⇄ Ping-pong</button>
           </div>
           <div class="fv-meta" id="fvMeta"></div>
-          <p class="fv-hint">Kéo nhiều folder cùng lúc để tạo playlist, click tên để play · ↑/↓ để chuyển chuỗi · Delete để bỏ chuỗi đang xem · Space để Play/Stop · P để bật/tắt Ping-pong · nút x1/x2/x3/x4 góc phải để chỉnh tốc độ Play</p>
+          <p class="fv-hint"><kbd>↑</kbd><kbd>↓</kbd> chuyển chuỗi · <kbd>Space</kbd> Play/Stop · <kbd>P</kbd> Ping-pong · <kbd>Delete</kbd> bỏ chuỗi đang xem · nút x1–x4 góc phải để chỉnh tốc độ</p>
         </div>
       </section>
 
@@ -236,7 +237,16 @@
   </main>
 </div>
 
-<div class="watermark">Created by Mondiro</div>
+<footer class="status">
+  <button class="update-check-btn" id="checkUpdateBtn" type="button" title="Kiểm tra cập nhật">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+    <span>Kiểm tra cập nhật</span>
+  </button>
+  <span class="credit">Created by Mondiro</span>
+</footer>
+
+</div>
+
 
 <script src="renderer.js"></script>
 <script src="license-ui.js"></script>
