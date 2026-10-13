@@ -51,7 +51,7 @@
   const lockOverlay = el('div', { id: 'lock-overlay' }, [
     el('div', { class: 'lock-card' }, [
       el('div', { class: 'lock-brand' }, [el('span', { class: 'brand-red', text: 'Mondiro' }), el('span', { class: 'brand-white', text: ' Toolbox' })]),
-      el('div', { class: 'lock-sub', text: 'Gộp các tool xử lý ảnh & Spine vào 1 app' }),
+      el('div', { class: 'lock-sub', text: 'Các tool lặt vặt cho team Anim' }),
       lockMsg,
       keyForm
     ]),

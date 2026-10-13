@@ -14,7 +14,7 @@
     <img class="brand-icon" src="../build/icon.png" alt="">
     <div class="brand-text">
       <div class="brand-name"><span class="m">Mondiro</span> <span class="a">Toolbox</span><span id="appVersion"></span></div>
-      <div class="brand-desc">Gộp các tool xử lý ảnh &amp; Spine vào 1 app</div>
+      <div class="brand-desc">Các tool lặt vặt cho team Anim</div>
     </div>
   </div>
   <div class="tools" id="topTools"></div>
@@ -132,9 +132,20 @@
 
       <!-- RENAME -->
       <section class="tab-panel" data-panel="rename" hidden>
-        <span class="field-label">Tên mới</span>
-        <input class="input" id="renameTemplate" placeholder="vd: walk_run_##" style="max-width:320px; margin-bottom:6px;">
-        <p style="font:400 11px 'Inter',sans-serif; color:var(--text-faint); margin:0 0 16px;">Nhập hậu tố ## để tự đánh số thứ tự</p>
+        <div class="mode-toggle" id="renameModeToggle">
+          <button class="mode-btn active" data-mode="template" type="button">Đặt tên mới</button>
+          <button class="mode-btn" data-mode="remove" type="button">Tìm và xóa từ</button>
+        </div>
+        <div id="renameTemplateFields">
+          <span class="field-label">Tên mới</span>
+          <input class="input" id="renameTemplate" placeholder="vd: walk_run_##" style="max-width:320px; margin-bottom:6px;">
+          <p class="field-hint">Nhập hậu tố ## để tự đánh số thứ tự</p>
+        </div>
+        <div id="renameRemoveFields" hidden>
+          <span class="field-label">Từ cần xóa</span>
+          <input class="input" id="renameRemoveWords" placeholder="vd: noCT, _copy" style="max-width:320px; margin-bottom:6px;">
+          <p class="field-hint">Xóa từ này ở mọi file trong danh sách có chứa nó · nhiều từ cách nhau bằng dấu phẩy · không phân biệt hoa/thường</p>
+        </div>
         <div class="dropzone dz-standard" id="renameDrop">
           <div class="dz-empty">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
@@ -226,10 +237,15 @@
             <button class="fv-play" id="fvPlayBtn">▶</button>
             <input class="fv-scrub" id="fvScrub" type="range" value="0" min="0" max="0">
             <div class="fv-fps">FPS <input class="input" id="fvFps" value="30"></div>
-            <button class="fv-toggle-btn" id="fvPingPongBtn" type="button" title="Tự động đảo chiều khi hết chuỗi (ping-pong loop)">⇄ Ping-pong</button>
+            <button class="fv-toggle-btn fv-icon-btn" id="fvPingPongBtn" type="button" title="Loop Ping-pong (P)" aria-label="Loop Ping-pong">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13"/><path d="m14 4 4 4-4 4"/><path d="M20 16H7"/><path d="m10 12-4 4 4 4"/></svg>
+            </button>
+            <button class="fv-toggle-btn fv-icon-btn" id="fvReverseBtn" type="button" title="Tua ngược (R)" aria-label="Tua ngược">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 6.5v11L3.5 12 11 6.5Z"/><path d="M20 6.5v11L12.5 12 20 6.5Z"/></svg>
+            </button>
           </div>
           <div class="fv-meta" id="fvMeta"></div>
-          <p class="fv-hint"><kbd>↑</kbd><kbd>↓</kbd> chuyển chuỗi · <kbd>Space</kbd> Play/Stop · <kbd>P</kbd> Ping-pong · <kbd>Delete</kbd> bỏ chuỗi đang xem · nút x1–x4 góc phải để chỉnh tốc độ</p>
+          <p class="fv-hint"><kbd>↑</kbd><kbd>↓</kbd> chuyển chuỗi · <kbd>Space</kbd> Play/Stop · <kbd>P</kbd> Ping-pong · <kbd>R</kbd> Tua ngược · <kbd>Delete</kbd> bỏ chuỗi đang xem · nút x1–x4 góc phải để chỉnh tốc độ</p>
         </div>
       </section>
 

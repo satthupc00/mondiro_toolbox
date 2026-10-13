@@ -26,7 +26,7 @@ const TOOLS = {
   atlas: { label: "Merge Atlas", group: "SPINE / SYMBOLS", desc: "Giữ lại File PNG duy nhất, và cập nhật lại tên trong atlas." },
   blur: { label: "Blur Symbols", group: "SPINE / SYMBOLS", desc: "Blur Static Symbol và Tăng sáng hoặc tối, save đè file gốc." },
   crop: { label: "Smart Crop", group: "XỬ LÝ ẢNH", desc: "Tự động crop theo alpha, giữ đối xứng tâm ảnh — không lệch pivot." },
-  rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt, thêm hậu tố ## để tự đánh số thứ tự." },
+  rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và xóa 1 từ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
 };
@@ -316,8 +316,13 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const runBtn = document.getElementById("renameRunBtn");
   const clearBtn = document.getElementById("renameClearBtn");
   const templateEl = document.getElementById("renameTemplate");
+  const removeWordsEl = document.getElementById("renameRemoveWords");
+  const modeToggleEl = document.getElementById("renameModeToggle");
+  const templateFieldsEl = document.getElementById("renameTemplateFields");
+  const removeFieldsEl = document.getElementById("renameRemoveFields");
 
   let files = [];
+  let mode = "template"; // "template" (dat ten moi ##) | "remove" (tim va xoa tu)
 
   function generateNewName(template, index, ext, oldName) {
     template = (template || "").trim();
@@ -332,23 +337,87 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     return base + ext;
   }
 
+  // Tim va xoa tu: chi sua phan ten (khong dung duoi file), khong phan biet hoa/thuong.
+  // Sau khi xoa thi gop dau cach thua va bo dau cach/_/- thua o dau, cuoi ten.
+  function removeWords(oldName, wordsText) {
+    const words = String(wordsText || "").split(",").map((w) => w.trim()).filter(Boolean);
+    const ext = path.extname(oldName);
+    const base = path.basename(oldName, ext);
+    if (!words.length) return oldName;
+    let out = base;
+    for (const w of words) {
+      out = out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "");
+    }
+    if (out === base) return oldName;
+    out = out.replace(/ {2,}/g, " ").replace(/^[\s_-]+|[\s_-]+$/g, "");
+    return out + ext;
+  }
+
+  function newNameFor(p, i) {
+    const oldName = path.basename(p);
+    if (mode === "remove") return removeWords(oldName, removeWordsEl.value);
+    return generateNewName(templateEl.value, i, path.extname(oldName), oldName);
+  }
+
+  // Ly do khong doi ten duoc (de hien ngay trong danh sach truoc khi bam), null = OK.
+  function problemFor(p, newName, allNew) {
+    const oldName = path.basename(p);
+    if (newName === oldName) return null;
+    if (!path.basename(newName, path.extname(newName))) return "tên trống";
+    if (allNew.filter((n) => n.toLowerCase() === (path.dirname(p) + "/" + newName).toLowerCase()).length > 1) return "trùng tên";
+    const target = path.join(path.dirname(p), newName);
+    if (target.toLowerCase() !== p.toLowerCase() && fs.existsSync(target)) return "đã có file này";
+    return null;
+  }
+
+  function plan() {
+    const names = files.map((p, i) => newNameFor(p, i));
+    const keys = names.map((n, i) => (path.dirname(files[i]) + "/" + n));
+    return files.map((p, i) => ({ p, oldName: path.basename(p), newName: names[i], problem: problemFor(p, names[i], keys) }));
+  }
+
   function render() {
     listEl.innerHTML = "";
-    files.forEach((p, i) => {
-      const oldName = path.basename(p);
-      const ext = path.extname(oldName);
-      const newName = generateNewName(templateEl.value, i, ext, oldName);
+    for (const it of plan()) {
       const row = document.createElement("div");
-      row.className = "filerow";
-      row.innerHTML = `<span>${oldName}</span><span class="arrow">→</span><span class="new">${newName}</span>`;
+      const same = it.newName === it.oldName;
+      row.className = "filerow" + (same ? " unchanged" : "");
+      const oldSpan = document.createElement("span");
+      oldSpan.textContent = it.oldName;
+      row.appendChild(oldSpan);
+      if (!same) {
+        const arrow = document.createElement("span");
+        arrow.className = "arrow";
+        arrow.textContent = "→";
+        const newSpan = document.createElement("span");
+        newSpan.className = "new";
+        newSpan.textContent = it.newName;
+        row.append(arrow, newSpan);
+      }
+      if (it.problem) {
+        const err = document.createElement("span");
+        err.className = "err";
+        err.textContent = it.problem;
+        row.appendChild(err);
+      }
       listEl.appendChild(row);
-    });
+    }
     const has = files.length > 0;
     emptyEl.hidden = has;
     listEl.hidden = !has;
   }
 
+  function setMode(m) {
+    mode = m;
+    modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+    templateFieldsEl.hidden = m !== "template";
+    removeFieldsEl.hidden = m !== "remove";
+    render();
+  }
+  modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
   templateEl.addEventListener("input", render);
+  removeWordsEl.addEventListener("input", render);
 
   setupDropzoneVisuals(dropEl);
   dropEl.addEventListener("drop", (e) => {
@@ -366,19 +435,24 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   function runRename() {
     if (!files.length) { toast("Chưa có file nào"); return { success: 0, failed: [] }; }
+    const items = plan();
+    const todo = items.filter((it) => it.newName !== it.oldName);
+    if (!todo.length) {
+      toast(mode === "remove" ? "Không file nào chứa từ cần xóa." : "Chưa nhập tên mới.");
+      return { success: 0, failed: [] };
+    }
     let success = 0;
     const failed = [];
-    files = files.map((p, i) => {
-      const folder = path.dirname(p);
-      const oldName = path.basename(p);
-      const ext = path.extname(oldName);
-      const newName = generateNewName(templateEl.value, i, ext, oldName);
-      const newPath = path.join(folder, newName);
-      try { fs.renameSync(p, newPath); success++; return newPath; }
-      catch (e) { failed.push(`${oldName}: ${e.message}`); return p; }
-    });
+    const renamed = new Map();
+    for (const it of todo) {
+      if (it.problem) { failed.push(`${it.oldName}: ${it.problem}`); continue; }
+      const newPath = path.join(path.dirname(it.p), it.newName);
+      try { fs.renameSync(it.p, newPath); success++; renamed.set(it.p, newPath); }
+      catch (e) { failed.push(`${it.oldName}: ${e.message}`); }
+    }
+    files = files.map((p) => renamed.get(p) || p);
     render();
-    if (failed.length) { toast(`Đổi tên thất bại ${failed.length} file.`); console.error(failed.join("\n")); }
+    if (failed.length) { toast(`Đổi tên ${success} file, bỏ qua ${failed.length} file (trùng tên / lỗi).`); console.error(failed.join("\n")); }
     else toast(`Đã đổi tên ${success} file`);
     return { success, failed };
   }
@@ -388,6 +462,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     addFile: (p) => { if (!files.includes(p)) files.push(p); render(); },
     run: runRename,
     templateEl,
+    removeWordsEl,
+    setMode,
     getFiles: () => files,
   };
 })();
@@ -597,7 +673,9 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const fpsEl = document.getElementById("fvFps");
   const metaEl = document.getElementById("fvMeta");
   const pingPongBtn = document.getElementById("fvPingPongBtn");
+  const reverseBtn = document.getElementById("fvReverseBtn");
   let pingPong = false;
+  let reverse = false; // tua nguoc: play tu khung cuoi ve khung dau
   let speed = 1; // 1x/2x/3x/4x — nhan voi toc do play, khong doi FPS hien thi
 
   const EMPTY_HTML = `
@@ -838,11 +916,13 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const cycleMs = (virtualLen / NATIVE_FPS) * 1000 / speed;
     const fps = Math.max(1, parseInt(fpsEl.value, 10) || 30);
     const tickMs = 1000 / fps;
-    const startTime = performance.now() - (currentIndex / virtualLen) * cycleMs;
+    // Tua nguoc = doi chieu chi so khung (n-1-i); van dung chung voi ping-pong/FPS/speed.
+    const flip = (i) => (reverse ? frameCount - 1 - i : i);
+    const startTime = performance.now() - (flip(currentIndex) / virtualLen) * cycleMs;
     timer = setInterval(() => {
       const elapsed = (performance.now() - startTime) % cycleMs;
       const vIdx = Math.floor((elapsed / cycleMs) * virtualLen) % virtualLen;
-      currentIndex = virtualIndexToFrameIndex(vIdx, frameCount);
+      currentIndex = flip(virtualIndexToFrameIndex(vIdx, frameCount));
       scrubEl.value = currentIndex;
       renderFrame();
     }, tickMs);
@@ -903,6 +983,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   pingPongBtn.addEventListener("click", () => setPingPong(!pingPong));
 
+  function setReverse(v) {
+    reverse = !!v;
+    reverseBtn.classList.toggle("active", reverse);
+    if (playing) { stopPlaying(); startPlaying(); }
+  }
+
+  reverseBtn.addEventListener("click", () => setReverse(!reverse));
+
   document.addEventListener("keydown", (e) => {
     if (document.querySelector('.tab-panel[data-panel="frames"]').hidden) return;
     const tag = document.activeElement && document.activeElement.tagName;
@@ -916,6 +1004,10 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     }
     if (e.key === "p" || e.key === "P") {
       setPingPong(!pingPong);
+      return;
+    }
+    if (e.key === "r" || e.key === "R") {
+      setReverse(!reverse);
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && current) {
@@ -937,12 +1029,13 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   // expose for internal test harness (headless smoke test)
   window.__fbfViewer = {
     handleDropped, handleDroppedRaw, handleDroppedPaths, selectSequence, removeSequence, clearPlaylist, startPlaying, stopPlaying, setFps,
-    setPingPong, computeVirtualLength, virtualIndexToFrameIndex, setSpeed,
+    setPingPong, setReverse, computeVirtualLength, virtualIndexToFrameIndex, setSpeed,
     get playing() { return playing; },
     get currentIndex() { return currentIndex; },
     get current() { return current; },
     get playlist() { return playlist; },
     get pingPong() { return pingPong; },
+    get reverse() { return reverse; },
     get speed() { return speed; },
   };
 })();
