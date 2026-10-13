@@ -60,7 +60,7 @@ Thu hồi hoặc xóa key ở bảng Admin (của Spine Preview hoặc của Too
 ## Giao diện & icon
 
 Giao diện theo chuẩn chung của các app Mondiro (m-skill): header có icon + **Mondiro** đỏ + tên app trắng
-và dòng mô tả, sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
+và dòng mô tả ("Các tool lặt vặt cho team Anim"), sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
 Màu nhấn đỏ `#E5383B`, font Segoe UI, có hiệu ứng chuyển động nhẹ cho nút/danh sách/thanh trượt.
 
 Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ). `build/icon.png` (512px) và
@@ -75,15 +75,17 @@ Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ
   chỉnh Lightness qua không gian màu HSL giữ nguyên Hue/Saturation).
 - **Smart Crop** — tự động crop theo vùng alpha, giữ đối xứng tâm ảnh (không lệch pivot khi dùng
   trong Spine/Cocos).
-- **Rename** — đổi tên hàng loạt, hậu tố `##` để tự đánh số thứ tự.
+- **Rename** — 2 chế độ: **Đặt tên mới** (hậu tố `##` để tự đánh số thứ tự) và **Tìm và xóa từ**
+  (xóa 1 hoặc nhiều từ, cách nhau bằng dấu phẩy, khỏi tên mọi file có chứa nó; không phân biệt hoa/thường,
+  tự gọn dấu cách thừa). Danh sách xem trước tên mới; file trùng tên hoặc đã tồn tại sẽ được báo và bỏ qua.
 - **Resize** — scale hàng loạt theo % hoặc theo pixel (chỉ cần nhập Rộng hoặc Cao, chiều còn lại
   tự tính theo đúng tỉ lệ ảnh gốc của từng file), ghi đè trực tiếp lên file gốc.
 - **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
   ... `walk_23.png`). App quét cả folder con, mỗi chuỗi ảnh thành 1 dòng trong **Playlist** bên trái
   (folder có nhiều chuỗi khác tên thì hiện `tên folder / tên chuỗi`). Click tên nào thì play chuỗi đó.
   Playlist luôn hiện sẵn, thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
-  Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, Ping-pong.
-  Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong.
+  Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, nút Loop Ping-pong và Tua ngược.
+  Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong, R bật/tắt Tua ngược.
 
 ## Cấu trúc thư mục
 
