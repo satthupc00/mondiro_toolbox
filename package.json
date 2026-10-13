@@ -1,6 +1,6 @@
 {
   "name": "mondiro-toolbox",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Mondiro Toolbox — gop cac tool xu ly anh/Spine cua Mondiro thanh 1 app duy nhat",
   "main": "main.js",
   "scripts": {

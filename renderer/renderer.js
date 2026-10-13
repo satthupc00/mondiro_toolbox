@@ -26,7 +26,7 @@ const TOOLS = {
   atlas: { label: "Merge Atlas", group: "SPINE / SYMBOLS", desc: "Giữ lại File PNG duy nhất, và cập nhật lại tên trong atlas." },
   blur: { label: "Blur Symbols", group: "SPINE / SYMBOLS", desc: "Blur Static Symbol và Tăng sáng hoặc tối, save đè file gốc." },
   crop: { label: "Smart Crop", group: "XỬ LÝ ẢNH", desc: "Tự động crop theo alpha, giữ đối xứng tâm ảnh — không lệch pivot." },
-  rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và xóa 1 từ trong tên file." },
+  rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và thay thế chữ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
 };
@@ -316,13 +316,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const runBtn = document.getElementById("renameRunBtn");
   const clearBtn = document.getElementById("renameClearBtn");
   const templateEl = document.getElementById("renameTemplate");
-  const removeWordsEl = document.getElementById("renameRemoveWords");
+  const findEl = document.getElementById("renameFind");
+  const replaceEl = document.getElementById("renameReplace");
   const modeToggleEl = document.getElementById("renameModeToggle");
   const templateFieldsEl = document.getElementById("renameTemplateFields");
-  const removeFieldsEl = document.getElementById("renameRemoveFields");
+  const replaceFieldsEl = document.getElementById("renameReplaceFields");
 
   let files = [];
-  let mode = "template"; // "template" (dat ten moi ##) | "remove" (tim va xoa tu)
+  let mode = "template"; // "template" (dat ten moi ##) | "replace" (tim va thay the)
 
   function generateNewName(template, index, ext, oldName) {
     template = (template || "").trim();
@@ -337,25 +338,38 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     return base + ext;
   }
 
-  // Tim va xoa tu: chi sua phan ten (khong dung duoi file), khong phan biet hoa/thuong.
-  // Sau khi xoa thi gop dau cach thua va bo dau cach/_/- thua o dau, cuoi ten.
-  function removeWords(oldName, wordsText) {
-    const words = String(wordsText || "").split(",").map((w) => w.trim()).filter(Boolean);
+  // Tim va thay the: chi sua phan ten (khong dung duoi file), khong phan biet hoa/thuong.
+  // O "Thay bang" de trong = xoa chu can tim, va gon dau noi (cach/_/-) ngay tai cho vua xoa:
+  // "walk_noct_00" -> "walk_00", "noct_walk" -> "walk", "Up noCT noRSZ" -> "Up noRSZ".
+  function findReplace(oldName, find, replacement) {
+    if (!find || !find.trim()) return oldName;
     const ext = path.extname(oldName);
     const base = path.basename(oldName, ext);
-    if (!words.length) return oldName;
-    let out = base;
-    for (const w of words) {
-      out = out.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "");
+    const lowerBase = base.toLowerCase();
+    const lowerFind = find.toLowerCase();
+    const isSep = (c) => c === " " || c === "_" || c === "-";
+    let out = "";
+    let i = 0;
+    let found = false;
+    for (let at = lowerBase.indexOf(lowerFind); at !== -1; at = lowerBase.indexOf(lowerFind, i)) {
+      found = true;
+      out += base.slice(i, at);
+      i = at + find.length;
+      if (replacement) { out += replacement; continue; }
+      // xoa: neu ben trai la dau dau ten hoac dau noi, bo dau noi ngay ben phai
+      if ((out === "" || isSep(out[out.length - 1])) && isSep(base[i])) i++;
     }
-    if (out === base) return oldName;
-    out = out.replace(/ {2,}/g, " ").replace(/^[\s_-]+|[\s_-]+$/g, "");
+    if (!found) return oldName;
+    out += base.slice(i);
+    if (!replacement) {
+      while (out && isSep(out[out.length - 1]) && i >= base.length) out = out.slice(0, -1);
+    }
     return out + ext;
   }
 
   function newNameFor(p, i) {
     const oldName = path.basename(p);
-    if (mode === "remove") return removeWords(oldName, removeWordsEl.value);
+    if (mode === "replace") return findReplace(oldName, findEl.value, replaceEl.value);
     return generateNewName(templateEl.value, i, path.extname(oldName), oldName);
   }
 
@@ -364,6 +378,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const oldName = path.basename(p);
     if (newName === oldName) return null;
     if (!path.basename(newName, path.extname(newName))) return "tên trống";
+    if (/[\\/:*?"<>|]/.test(newName)) return "ký tự không hợp lệ";
     if (allNew.filter((n) => n.toLowerCase() === (path.dirname(p) + "/" + newName).toLowerCase()).length > 1) return "trùng tên";
     const target = path.join(path.dirname(p), newName);
     if (target.toLowerCase() !== p.toLowerCase() && fs.existsSync(target)) return "đã có file này";
@@ -411,13 +426,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     mode = m;
     modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
     templateFieldsEl.hidden = m !== "template";
-    removeFieldsEl.hidden = m !== "remove";
+    replaceFieldsEl.hidden = m !== "replace";
     render();
   }
   modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
   templateEl.addEventListener("input", render);
-  removeWordsEl.addEventListener("input", render);
+  findEl.addEventListener("input", render);
+  replaceEl.addEventListener("input", render);
 
   setupDropzoneVisuals(dropEl);
   dropEl.addEventListener("drop", (e) => {
@@ -438,7 +454,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const items = plan();
     const todo = items.filter((it) => it.newName !== it.oldName);
     if (!todo.length) {
-      toast(mode === "remove" ? "Không file nào chứa từ cần xóa." : "Chưa nhập tên mới.");
+      toast(mode === "replace" ? "Không file nào chứa chữ cần tìm." : "Chưa nhập tên mới.");
       return { success: 0, failed: [] };
     }
     let success = 0;
@@ -462,7 +478,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     addFile: (p) => { if (!files.includes(p)) files.push(p); render(); },
     run: runRename,
     templateEl,
-    removeWordsEl,
+    findEl,
+    replaceEl,
     setMode,
     getFiles: () => files,
   };

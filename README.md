@@ -75,9 +75,10 @@ Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ
   chỉnh Lightness qua không gian màu HSL giữ nguyên Hue/Saturation).
 - **Smart Crop** — tự động crop theo vùng alpha, giữ đối xứng tâm ảnh (không lệch pivot khi dùng
   trong Spine/Cocos).
-- **Rename** — 2 chế độ: **Đặt tên mới** (hậu tố `##` để tự đánh số thứ tự) và **Tìm và xóa từ**
-  (xóa 1 hoặc nhiều từ, cách nhau bằng dấu phẩy, khỏi tên mọi file có chứa nó; không phân biệt hoa/thường,
-  tự gọn dấu cách thừa). Danh sách xem trước tên mới; file trùng tên hoặc đã tồn tại sẽ được báo và bỏ qua.
+- **Rename** — 2 chế độ: **Đặt tên mới** (hậu tố `##` để tự đánh số thứ tự) và **Tìm và thay thế**
+  (ô **Tìm** + ô **Thay bằng**, áp dụng cho mọi file có chứa chữ cần tìm, không phân biệt hoa/thường;
+  để trống ô Thay bằng thì xóa luôn chữ đó và tự gọn dấu nối thừa, vd `walk_noCT_00` → `walk_00`).
+  Danh sách xem trước tên mới; file trùng tên, đã tồn tại, tên trống hoặc có ký tự không hợp lệ sẽ được báo và bỏ qua.
 - **Resize** — scale hàng loạt theo % hoặc theo pixel (chỉ cần nhập Rộng hoặc Cao, chiều còn lại
   tự tính theo đúng tỉ lệ ảnh gốc của từng file), ghi đè trực tiếp lên file gốc.
 - **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
