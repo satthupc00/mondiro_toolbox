@@ -13,16 +13,38 @@ app.setName("Mondiro Toolbox");
 
 let mainWindow;
 
+// Remembers the window size/position between launches.
+const STATE_FILE = path.join(app.getPath("userData"), "window-state.json");
+const MIN_WIDTH = 900;
+const MIN_HEIGHT = 640;
+
+function loadWindowState() {
+  try {
+    const s = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    return { width: Math.max(s.width || 1040, MIN_WIDTH), height: Math.max(s.height || 740, MIN_HEIGHT), x: s.x, y: s.y };
+  } catch (e) {
+    return { width: 1040, height: 740 };
+  }
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return;
+  try { fs.writeFileSync(STATE_FILE, JSON.stringify(mainWindow.getNormalBounds())); } catch (e) { /* not critical */ }
+}
+
 function createWindow() {
   const iconPath = path.join(__dirname, "build", "icon.png");
+  const state = loadWindowState();
 
   mainWindow = new BrowserWindow({
-    width: 790,
-    height: 720,
-    minWidth: 790,
-    minHeight: 620,
+    width: state.width,
+    height: state.height,
+    x: state.x,
+    y: state.y,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     title: "Mondiro Toolbox",
-    backgroundColor: "#16171c",
+    backgroundColor: "#1F2126",
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       nodeIntegration: true,
@@ -33,6 +55,12 @@ function createWindow() {
 
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+
+  let saveTimer = null;
+  const scheduleSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveWindowState, 300); };
+  mainWindow.on("resize", scheduleSave);
+  mainWindow.on("move", scheduleSave);
+  mainWindow.on("close", saveWindowState);
 }
 
 app.whenReady().then(() => {
