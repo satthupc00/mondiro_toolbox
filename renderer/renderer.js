@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { blurSymbol, smartCrop, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
+const { blurSymbol, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
 
 let webUtils = null;
 try { webUtils = require("electron").webUtils; } catch (e) { /* fallback file.path */ }
@@ -25,11 +25,10 @@ function toast(msg) {
 const TOOLS = {
   atlas: { label: "Merge Atlas", group: "SPINE / SYMBOLS", desc: "Giữ lại File PNG duy nhất, và cập nhật lại tên trong atlas." },
   blur: { label: "Blur Symbols", group: "SPINE / SYMBOLS", desc: "Blur Static Symbol và Tăng sáng hoặc tối, save đè file gốc." },
-  crop: { label: "Smart Crop", group: "XỬ LÝ ẢNH", desc: "Tự động crop theo alpha, giữ đối xứng tâm ảnh — không lệch pivot." },
   rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và thay thế chữ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
-  cropfbf: { label: "Crop FBF", group: "ANIMATION", desc: "Crop cả chuỗi hình về cùng 1 khung: tự cắt phần trong suốt thừa, hoặc theo kích thước W×H. Ghi đè file gốc." },
+  cropfbf: { label: "Crop FBF", group: "XỬ LÝ ẢNH", desc: "Tự cắt phần trong suốt thừa (chung cả chuỗi hoặc riêng từng ảnh), hoặc crop theo kích thước W×H. Ghi đè file gốc." },
 };
 
 const eyebrowEl = document.getElementById("eyebrow");
@@ -280,34 +279,6 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 })();
 
 // ============================================================
-// SMART CROP
-// ============================================================
-(function initCrop() {
-  const dropEl = document.getElementById("cropDrop");
-  const runBtn = document.getElementById("cropRunBtn");
-  const clearBtn = document.getElementById("cropClearBtn");
-  const fl = makeDropzoneFileList(dropEl);
-
-  clearBtn.addEventListener("click", () => fl.clear());
-
-  async function runCrop() {
-    if (!fl.files.length) { toast("Hãy thêm PNG trước."); return { success: 0, failed: [] }; }
-    let success = 0;
-    const failed = [];
-    for (const p of fl.files) {
-      try { await smartCrop(p); success++; }
-      catch (e) { failed.push(`${path.basename(p)}: ${e.message}`); }
-    }
-    if (failed.length) { toast(`Crop thành công ${success}, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
-    else toast(`Đã crop ${success} file.`);
-    return { success, failed };
-  }
-
-  runBtn.addEventListener("click", runCrop);
-  window.__cropTest = { fl, run: runCrop };
-})();
-
-// ============================================================
 // RENAME
 // ============================================================
 (function initRename() {
@@ -431,6 +402,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     render();
   }
   modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
 
   templateEl.addEventListener("input", render);
   findEl.addEventListener("input", render);
@@ -676,6 +648,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const sizeFieldsEl = document.getElementById("cfSizeFields");
   const paddingEl = document.getElementById("cfPadding");
   const keepCenterEl = document.getElementById("cfKeepCenter");
+  const scopeToggleEl = document.getElementById("cfScopeToggle");
+  const autoHintEl = document.getElementById("cfAutoHint");
   const widthEl = document.getElementById("cfWidth");
   const heightEl = document.getElementById("cfHeight");
   const anchorEl = document.getElementById("cfAnchor");
@@ -693,6 +667,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   let mode = "auto"; // "auto" | "size"
   let anchor = { ax: 0.5, ay: 0.5 };
+  let scope = "shared"; // Auto Crop: "shared" (chung 1 khung cho ca chuoi) | "each" (rieng tung anh)
   const bounds = new Map(); // filePath -> { width, height, bbox }
   let scanToken = 0;
   let busy = false;
@@ -769,6 +744,28 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const sizes = new Set(list.map((it) => it.b.width + "x" + it.b.height));
     const mixed = sizes.size > 1;
     if (mode === "auto") {
+      const pad = Math.max(0, parseInt(paddingEl.value, 10) || 0);
+      // khung tu bbox (x0..x1, y0..y1) cua anh W×H: giu tam neu can, roi chua le
+      const rectFrom = (x0, y0, x1, y1, W, H) => {
+        if (keepCenterEl.checked) {
+          const cx = Math.min(x0, W - x1), cy = Math.min(y0, H - y1);
+          x0 = cx; x1 = W - cx; y0 = cy; y1 = H - cy;
+        }
+        return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+      };
+      if (scope === "each") {
+        // nhu Smart Crop cu: moi anh crop theo vung ve cua chinh no (anh trong suot hoan toan thi giu nguyen)
+        if (!list.some((it) => it.b.bbox)) return { error: "Các ảnh đều trong suốt, không có gì để crop." };
+        return {
+          mixed: false, each: true,
+          frames: list.map((it) => ({
+            p: it.p, width: it.b.width, height: it.b.height,
+            rect: it.b.bbox
+              ? rectFrom(it.b.bbox.x0, it.b.bbox.y0, it.b.bbox.x1, it.b.bbox.y1, it.b.width, it.b.height)
+              : { x: 0, y: 0, w: it.b.width, h: it.b.height },
+          })),
+        };
+      }
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const { b } of list) {
         if (!b.bbox) continue;
@@ -776,14 +773,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
         x1 = Math.max(x1, b.bbox.x1); y1 = Math.max(y1, b.bbox.y1);
       }
       if (x1 < 0) return { error: "Cả chuỗi đều trong suốt, không có gì để crop." };
-      const pad = Math.max(0, parseInt(paddingEl.value, 10) || 0);
-      const W = list[0].b.width, H = list[0].b.height;
-      if (keepCenterEl.checked) {
-        // cat deu 2 ben quanh tam anh (theo frame dau) de pivot khong lech
-        const cx = Math.min(x0, W - x1), cy = Math.min(y0, H - y1);
-        x0 = cx; x1 = W - cx; y0 = cy; y1 = H - cy;
-      }
-      const rect = { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+      // giu tam tinh theo frame dau, de pivot ca chuoi khong lech
+      const rect = rectFrom(x0, y0, x1, y1, list[0].b.width, list[0].b.height);
       return { mixed, frames: list.map((it) => ({ p: it.p, width: it.b.width, height: it.b.height, rect })) };
     }
     const w = parseInt(widthEl.value, 10), h = parseInt(heightEl.value, 10);
@@ -833,7 +824,10 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     rectEl.style.height = f.rect.h * scale + "px";
     sizeInfoEl.innerHTML = `${b.width}×${b.height} → <b>${f.rect.w}×${f.rect.h}</b>`;
     const same = res.frames.every((it) => it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height);
-    if (res.mixed) setStatus("Các frame trong chuỗi không cùng kích thước — vẫn crop được nhưng nên kiểm tra lại.", true);
+    if (res.each) {
+      const n = res.frames.filter((it) => !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height)).length;
+      setStatus(n ? `${n}/${res.frames.length} ảnh sẽ được crop, mỗi ảnh theo vùng vẽ của riêng nó (kích thước khác nhau).` : "Các ảnh đã vừa khít, không còn phần thừa để crop.");
+    } else if (res.mixed) setStatus("Các frame trong chuỗi không cùng kích thước — vẫn crop được nhưng nên kiểm tra lại.", true);
     else if (same) setStatus("Chuỗi đã vừa khít, không còn phần thừa để crop.");
     else setStatus(`${res.frames.length} frame sẽ ra cùng kích thước ${f.rect.w}×${f.rect.h}.`);
   }
@@ -853,6 +847,18 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     update();
   }
   modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  const AUTO_HINT = {
+    shared: "Tự tìm điểm xa nhất có pixel được vẽ trong <b>cả chuỗi</b>, cắt bỏ phần trong suốt thừa. Mọi frame ra cùng 1 kích thước, không lệch vị trí.",
+    each: "Mỗi ảnh tự cắt theo vùng vẽ của <b>chính nó</b>, kích thước ra khác nhau — dùng cho các symbol rời. Bật Giữ tâm ảnh là giống Smart Crop cũ.",
+  };
+  function setScope(v) {
+    scope = v;
+    scopeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.scope === v));
+    autoHintEl.innerHTML = AUTO_HINT[v];
+    update();
+  }
+  scopeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setScope(b.dataset.scope)));
+  autoHintEl.innerHTML = AUTO_HINT.shared;
   anchorEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
     anchor = { ax: parseFloat(b.dataset.ax), ay: parseFloat(b.dataset.ay) };
     anchorEl.querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
@@ -885,14 +891,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     runBtn.disabled = false;
     cacheBust++; // anh da doi, nap lai
     if (failed.length) { toast(`Crop ${success} file, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
-    else toast(`Đã crop ${success} file về ${todo[0].rect.w}×${todo[0].rect.h}.`);
+    else toast(res.each ? `Đã crop ${success} ảnh.` : `Đã crop ${success} file về ${todo[0].rect.w}×${todo[0].rect.h}.`);
     await scan();
     return { success, failed };
   }
   runBtn.addEventListener("click", runCropFbf);
 
   update();
-  window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, plan, scan, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
+  window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
 })();
 
 // ============================================================

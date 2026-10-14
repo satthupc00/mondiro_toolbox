@@ -1,6 +1,6 @@
 # Mondiro Toolbox (bản Electron)
 
-Gộp 6 tool: Merge Atlas, Blur Symbols, Smart Crop, Rename, Resize, FBF Viewer thành 1 app duy nhất,
+Gộp 6 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, FBF Viewer thành 1 app duy nhất,
 giao diện y theo bản mockup đã duyệt (sidebar icon-rail thu gọn/mở rộng, icon thật, bo góc).
 
 Đây là bản viết lại bằng Electron (giao diện đẹp như trình duyệt thật) thay cho bản Python/Tkinter
@@ -74,8 +74,6 @@ Icon "Sprite Drawer" (lưới 4 ô, 1 ô đỏ đang trượt ra), không có kh
 - **Blur Symbols** — batch motion blur (theo chiều dọc) + chỉnh Lightness cho PNG symbol, không cần
   Photoshop. Thuật toán port lại 1:1 từ bản Python đã test (premultiplied alpha để không lem viền,
   chỉnh Lightness qua không gian màu HSL giữ nguyên Hue/Saturation).
-- **Smart Crop** — tự động crop theo vùng alpha, giữ đối xứng tâm ảnh (không lệch pivot khi dùng
-  trong Spine/Cocos).
 - **Rename** — 2 chế độ: **Đặt tên mới** (hậu tố `##` để tự đánh số thứ tự) và **Tìm và thay thế**
   (ô **Tìm** + ô **Thay bằng**, áp dụng cho mọi file có chứa chữ cần tìm, không phân biệt hoa/thường;
   để trống ô Thay bằng thì xóa luôn chữ đó và tự gọn dấu nối thừa, vd `walk_noCT_00` → `walk_00`).
@@ -89,11 +87,12 @@ Icon "Sprite Drawer" (lưới 4 ô, 1 ô đỏ đang trượt ra), không có kh
   Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, nút Loop Ping-pong và Tua ngược.
   Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong, R bật/tắt Tua ngược.
 
-- **Crop FBF** — crop cả chuỗi hình về **cùng 1 khung** (kéo thả file hoặc folder). 2 chế độ:
-  **Auto Crop** tự tìm điểm xa nhất có pixel được vẽ trong cả chuỗi rồi cắt bỏ phần trong suốt thừa
-  (tuỳ chọn chừa lề px, và "Giữ tâm ảnh" để pivot trong Spine/Cocos không lệch); **Theo kích thước W×H**
-  với điểm neo 3×3 (nhập lớn hơn ảnh thì phần dư là nền trong suốt). Có khung xem trước từng frame.
-  Mọi frame ra cùng kích thước và không lệch vị trí tương đối. Ghi đè file gốc.
+- **Crop FBF** — tự cắt phần trong suốt thừa hoặc crop theo kích thước (kéo thả file hoặc folder). 2 chế độ:
+  **Auto Crop**: tìm vùng có pixel được vẽ rồi cắt bỏ phần trong suốt thừa, với khung crop **Chung cả chuỗi**
+  (mọi frame ra cùng kích thước, không lệch vị trí — cho chuỗi FBF) hoặc **Riêng từng ảnh** (mỗi ảnh theo
+  vùng vẽ của nó — cho symbol rời); tuỳ chọn chừa lề px và **Giữ tâm ảnh** để pivot Spine/Cocos không lệch
+  (Riêng từng ảnh + Giữ tâm = Smart Crop cũ). **Theo kích thước W×H** với điểm neo 3×3 (nhập lớn hơn ảnh thì
+  phần dư là nền trong suốt). Có khung xem trước từng frame. Ghi đè file gốc.
 
 ## Cấu trúc thư mục
 

@@ -42,9 +42,9 @@
 
     <div class="nav-group-label" style="margin-top:14px;">Xử lý ảnh</div>
     <div class="nav">
-      <div class="nav-item" data-tab="crop" title="Smart Crop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
-        <span>Smart Crop</span>
+      <div class="nav-item" data-tab="cropfbf" title="Crop FBF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/><rect x="10" y="10" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/></svg>
+        <span>Crop FBF</span>
       </div>
       <div class="nav-item" data-tab="rename" title="Rename">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -61,10 +61,6 @@
       <div class="nav-item" data-tab="frames" title="FBF Viewer">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h4M2 15h4M18 3v4M18 17v4M18 9h4M18 15h4"/></svg>
         <span>FBF Viewer</span>
-      </div>
-      <div class="nav-item" data-tab="cropfbf" title="Crop FBF">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/><rect x="10" y="10" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/></svg>
-        <span>Crop FBF</span>
       </div>
     </div>
 
@@ -117,21 +113,6 @@
           <button class="btn btn-ghost" id="blurClearBtn">Xóa hết</button>
         </div>
         <div id="blurStatus" style="margin-top:10px; font:500 12px 'Inter',sans-serif; color:var(--text-faint);"></div>
-      </section>
-
-      <!-- CROP -->
-      <section class="tab-panel" data-panel="crop" hidden>
-        <div class="dropzone dz-standard" id="cropDrop">
-          <div class="dz-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-            <span>Kéo thả PNG/JPG vào đây</span>
-          </div>
-          <div class="filelist dz-list" id="cropList" hidden></div>
-        </div>
-        <div style="margin-top:12px; display:flex; gap:10px;">
-          <button class="btn btn-primary" id="cropRunBtn">Crop ngay</button>
-          <button class="btn btn-ghost" id="cropClearBtn">Xóa hết</button>
-        </div>
       </section>
 
       <!-- RENAME -->
@@ -272,6 +253,11 @@
             </div>
 
             <div class="panel-card cf-options" id="cfAutoFields">
+              <span class="field-label">Khung crop</span>
+              <div class="mode-toggle cf-scope" id="cfScopeToggle">
+                <button class="mode-btn active" data-scope="shared" type="button" title="Mọi frame chung 1 khung, cùng kích thước, không lệch vị trí — dùng cho chuỗi FBF">Chung cả chuỗi</button>
+                <button class="mode-btn" data-scope="each" type="button" title="Mỗi ảnh crop theo vùng vẽ của chính nó, kích thước khác nhau — dùng cho các symbol rời (như Smart Crop cũ)">Riêng từng ảnh</button>
+              </div>
               <div class="field-row" style="gap:16px; align-items:center;">
                 <div>
                   <span class="field-label">Chừa lề (px)</span>
@@ -281,7 +267,7 @@
                   <input type="checkbox" id="cfKeepCenter"> Giữ tâm ảnh (không lệch pivot)
                 </label>
               </div>
-              <p class="field-hint" style="margin:10px 0 0;">Tự tìm điểm xa nhất có pixel được vẽ trong <b>cả chuỗi</b>, cắt bỏ phần trong suốt thừa. Mọi frame ra cùng 1 kích thước, không lệch vị trí.</p>
+              <p class="field-hint" id="cfAutoHint" style="margin:10px 0 0;"></p>
             </div>
 
             <div class="panel-card cf-options" id="cfSizeFields" hidden>
