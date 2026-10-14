@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Mondiro Toolbox (small sizes)</title>
+  <g stroke="#1F2126" stroke-width="10" stroke-linejoin="round">
+    <rect x="8" y="8" width="108" height="108" rx="22" fill="#ECE8E0"/>
+    <rect x="128" y="8" width="108" height="108" rx="22" fill="#ECE8E0"/>
+    <rect x="8" y="128" width="108" height="108" rx="22" fill="#ECE8E0"/>
+    <rect x="140" y="140" width="108" height="108" rx="22" fill="#E5383B"/>
+  </g>
+</svg>

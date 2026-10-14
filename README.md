@@ -63,8 +63,9 @@ Giao diện theo chuẩn chung của các app Mondiro (m-skill): header có icon
 và dòng mô tả ("Các tool lặt vặt cho team Anim"), sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
 Màu nhấn đỏ `#E5383B`, font Segoe UI, có hiệu ứng chuyển động nhẹ cho nút/danh sách/thanh trượt.
 
-Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ). `build/icon.png` (512px) và
-`build/icon.ico` (16–256px) được xuất từ file này. Muốn đổi icon thì thay 3 file đó.
+Icon "Sprite Drawer" (lưới 4 ô, 1 ô đỏ đang trượt ra), không có khung nền. File gốc: `build/icon.svg`
+(cỡ lớn) và `build/icon-small.svg` (bản gọn cho 16/24/32px). `build/icon.png` (512px) và `build/icon.ico`
+(16–256px) được xuất từ 2 file này.
 
 ## Các tool bên trong
 
@@ -87,6 +88,12 @@ Icon gốc vẽ bằng SVG ở `build/icon.svg` (hộp đồ nghề, nắp đỏ
   Playlist luôn hiện sẵn, thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
   Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, nút Loop Ping-pong và Tua ngược.
   Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong, R bật/tắt Tua ngược.
+
+- **Crop FBF** — crop cả chuỗi hình về **cùng 1 khung** (kéo thả file hoặc folder). 2 chế độ:
+  **Auto Crop** tự tìm điểm xa nhất có pixel được vẽ trong cả chuỗi rồi cắt bỏ phần trong suốt thừa
+  (tuỳ chọn chừa lề px, và "Giữ tâm ảnh" để pivot trong Spine/Cocos không lệch); **Theo kích thước W×H**
+  với điểm neo 3×3 (nhập lớn hơn ảnh thì phần dư là nền trong suốt). Có khung xem trước từng frame.
+  Mọi frame ra cùng kích thước và không lệch vị trí tương đối. Ghi đè file gốc.
 
 ## Cấu trúc thư mục
 

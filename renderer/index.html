@@ -62,6 +62,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h4M2 15h4M18 3v4M18 17v4M18 9h4M18 15h4"/></svg>
         <span>FBF Viewer</span>
       </div>
+      <div class="nav-item" data-tab="cropfbf" title="Crop FBF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/><rect x="10" y="10" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/></svg>
+        <span>Crop FBF</span>
+      </div>
     </div>
 
     <div class="sidebar-spacer"></div>
@@ -255,6 +259,84 @@
           </div>
           <div class="fv-meta" id="fvMeta"></div>
           <p class="fv-hint"><kbd>↑</kbd><kbd>↓</kbd> chuyển chuỗi · <kbd>Space</kbd> Play/Stop · <kbd>P</kbd> Ping-pong · <kbd>R</kbd> Tua ngược · <kbd>Delete</kbd> bỏ chuỗi đang xem · nút x1–x4 góc phải để chỉnh tốc độ</p>
+        </div>
+      </section>
+
+      <!-- CROP FBF -->
+      <section class="tab-panel" data-panel="cropfbf" hidden>
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="mode-toggle" id="cfModeToggle">
+              <button class="mode-btn active" data-mode="auto" type="button">Auto Crop</button>
+              <button class="mode-btn" data-mode="size" type="button">Theo kích thước W×H</button>
+            </div>
+
+            <div class="panel-card cf-options" id="cfAutoFields">
+              <div class="field-row" style="gap:16px; align-items:center;">
+                <div>
+                  <span class="field-label">Chừa lề (px)</span>
+                  <input class="input input-short" id="cfPadding" value="0">
+                </div>
+                <label class="check" title="Crop đều 2 bên quanh tâm ảnh để pivot trong Spine/Cocos không bị lệch">
+                  <input type="checkbox" id="cfKeepCenter"> Giữ tâm ảnh (không lệch pivot)
+                </label>
+              </div>
+              <p class="field-hint" style="margin:10px 0 0;">Tự tìm điểm xa nhất có pixel được vẽ trong <b>cả chuỗi</b>, cắt bỏ phần trong suốt thừa. Mọi frame ra cùng 1 kích thước, không lệch vị trí.</p>
+            </div>
+
+            <div class="panel-card cf-options" id="cfSizeFields" hidden>
+              <div class="field-row" style="gap:16px;">
+                <div>
+                  <span class="field-label">Rộng (px)</span>
+                  <input class="input input-short" id="cfWidth" placeholder="W">
+                </div>
+                <div>
+                  <span class="field-label">Cao (px)</span>
+                  <input class="input input-short" id="cfHeight" placeholder="H">
+                </div>
+                <div>
+                  <span class="field-label">Neo</span>
+                  <div class="anchor-grid" id="cfAnchor">
+                    <button type="button" data-ax="0" data-ay="0" title="Trên trái"></button><button type="button" data-ax=".5" data-ay="0" title="Trên giữa"></button><button type="button" data-ax="1" data-ay="0" title="Trên phải"></button>
+                    <button type="button" data-ax="0" data-ay=".5" title="Giữa trái"></button><button type="button" data-ax=".5" data-ay=".5" class="active" title="Chính giữa"></button><button type="button" data-ax="1" data-ay=".5" title="Giữa phải"></button>
+                    <button type="button" data-ax="0" data-ay="1" title="Dưới trái"></button><button type="button" data-ax=".5" data-ay="1" title="Dưới giữa"></button><button type="button" data-ax="1" data-ay="1" title="Dưới phải"></button>
+                  </div>
+                </div>
+              </div>
+              <p class="field-hint" style="margin:10px 0 0;">Cắt mọi frame về đúng W×H, giữ theo điểm neo. Nhập lớn hơn ảnh thì phần dư là nền trong suốt.</p>
+            </div>
+
+            <div class="dropzone cf-drop" id="cfDrop">
+              <div class="dz-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo thả chuỗi hình hoặc folder vào đây</span>
+              </div>
+              <div class="filelist dz-list" id="cfList" hidden></div>
+            </div>
+            <div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+              <button class="btn btn-primary" id="cfRunBtn">Crop ngay</button>
+              <button class="btn btn-ghost" id="cfClearBtn">Xóa hết</button>
+            </div>
+          </div>
+
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <span class="cf-size" id="cfSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="cfStage">
+              <div class="cf-canvas" id="cfCanvas" hidden>
+                <img id="cfImg" alt="">
+                <div class="cf-rect" id="cfRect"></div>
+              </div>
+              <div class="cf-empty" id="cfEmpty">Chưa có hình</div>
+            </div>
+            <div class="cf-frame-row">
+              <input type="range" id="cfFrame" min="0" max="0" value="0">
+              <span class="cf-frame-label" id="cfFrameLabel"></span>
+            </div>
+            <div class="cf-status" id="cfStatus"></div>
+          </div>
         </div>
       </section>
 
