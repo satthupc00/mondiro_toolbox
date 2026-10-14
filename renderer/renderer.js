@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { blurSymbol, smartCrop, resizeImagePercent, resizeImagePixel, getImageSize } = require("../lib/imaging.js");
+const { blurSymbol, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
 
 let webUtils = null;
 try { webUtils = require("electron").webUtils; } catch (e) { /* fallback file.path */ }
@@ -25,10 +25,10 @@ function toast(msg) {
 const TOOLS = {
   atlas: { label: "Merge Atlas", group: "SPINE / SYMBOLS", desc: "Giữ lại File PNG duy nhất, và cập nhật lại tên trong atlas." },
   blur: { label: "Blur Symbols", group: "SPINE / SYMBOLS", desc: "Blur Static Symbol và Tăng sáng hoặc tối, save đè file gốc." },
-  crop: { label: "Smart Crop", group: "XỬ LÝ ẢNH", desc: "Tự động crop theo alpha, giữ đối xứng tâm ảnh — không lệch pivot." },
   rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và thay thế chữ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
+  cropfbf: { label: "Crop FBF", group: "XỬ LÝ ẢNH", desc: "Tự cắt phần trong suốt thừa (chung cả chuỗi hoặc riêng từng ảnh), hoặc crop theo kích thước W×H. Ghi đè file gốc." },
 };
 
 const eyebrowEl = document.getElementById("eyebrow");
@@ -279,34 +279,6 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 })();
 
 // ============================================================
-// SMART CROP
-// ============================================================
-(function initCrop() {
-  const dropEl = document.getElementById("cropDrop");
-  const runBtn = document.getElementById("cropRunBtn");
-  const clearBtn = document.getElementById("cropClearBtn");
-  const fl = makeDropzoneFileList(dropEl);
-
-  clearBtn.addEventListener("click", () => fl.clear());
-
-  async function runCrop() {
-    if (!fl.files.length) { toast("Hãy thêm PNG trước."); return { success: 0, failed: [] }; }
-    let success = 0;
-    const failed = [];
-    for (const p of fl.files) {
-      try { await smartCrop(p); success++; }
-      catch (e) { failed.push(`${path.basename(p)}: ${e.message}`); }
-    }
-    if (failed.length) { toast(`Crop thành công ${success}, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
-    else toast(`Đã crop ${success} file.`);
-    return { success, failed };
-  }
-
-  runBtn.addEventListener("click", runCrop);
-  window.__cropTest = { fl, run: runCrop };
-})();
-
-// ============================================================
 // RENAME
 // ============================================================
 (function initRename() {
@@ -430,6 +402,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     render();
   }
   modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
 
   templateEl.addEventListener("input", render);
   findEl.addEventListener("input", render);
@@ -660,6 +633,272 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     get sizesMismatched() { return sizesMismatched; },
     get pendingRefresh() { return pendingRefresh; },
   };
+})();
+
+// ============================================================
+// CROP FBF — crop ca chuoi hinh ve cung 1 khung (Auto Crop theo alpha cua ca chuoi, hoac W×H + diem neo)
+// ============================================================
+(function initCropFbf() {
+  const IMG_EXT = [".png", ".jpg", ".jpeg"];
+  const dropEl = document.getElementById("cfDrop");
+  const emptyEl = dropEl.querySelector(".dz-empty");
+  const listEl = document.getElementById("cfList");
+  const modeToggleEl = document.getElementById("cfModeToggle");
+  const autoFieldsEl = document.getElementById("cfAutoFields");
+  const sizeFieldsEl = document.getElementById("cfSizeFields");
+  const paddingEl = document.getElementById("cfPadding");
+  const keepCenterEl = document.getElementById("cfKeepCenter");
+  const scopeToggleEl = document.getElementById("cfScopeToggle");
+  const autoHintEl = document.getElementById("cfAutoHint");
+  const widthEl = document.getElementById("cfWidth");
+  const heightEl = document.getElementById("cfHeight");
+  const anchorEl = document.getElementById("cfAnchor");
+  const runBtn = document.getElementById("cfRunBtn");
+  const clearBtn = document.getElementById("cfClearBtn");
+  const canvasEl = document.getElementById("cfCanvas");
+  const stageEl = document.getElementById("cfStage");
+  const imgEl = document.getElementById("cfImg");
+  const rectEl = document.getElementById("cfRect");
+  const emptyStageEl = document.getElementById("cfEmpty");
+  const sizeInfoEl = document.getElementById("cfSizeInfo");
+  const frameEl = document.getElementById("cfFrame");
+  const frameLabelEl = document.getElementById("cfFrameLabel");
+  const statusEl = document.getElementById("cfStatus");
+
+  let mode = "auto"; // "auto" | "size"
+  let anchor = { ax: 0.5, ay: 0.5 };
+  let scope = "shared"; // Auto Crop: "shared" (chung 1 khung cho ca chuoi) | "each" (rieng tung anh)
+  const bounds = new Map(); // filePath -> { width, height, bbox }
+  let scanToken = 0;
+  let busy = false;
+  let cacheBust = 0; // tang sau moi lan crop de anh xem truoc nap lai file moi
+
+  const fl = makeSimpleFileList(listEl, {
+    acceptExt: IMG_EXT,
+    onChange: () => {
+      const has = fl.files.length > 0;
+      emptyEl.hidden = has;
+      listEl.hidden = !has;
+      frameEl.max = Math.max(0, fl.files.length - 1);
+      if (+frameEl.value > +frameEl.max) frameEl.value = frameEl.max;
+      scan();
+    },
+  });
+  emptyEl.hidden = false;
+  listEl.hidden = true;
+
+  function collect(p, out, depth = 0) {
+    let st;
+    try { st = fs.statSync(p); } catch (e) { return; }
+    if (st.isDirectory()) {
+      if (depth > 4) return;
+      for (const n of fs.readdirSync(p)) collect(path.join(p, n), out, depth + 1);
+    } else if (IMG_EXT.includes(path.extname(p).toLowerCase())) out.push(p);
+  }
+
+  function addPaths(paths) {
+    const found = [];
+    for (const p of paths) collect(p, found);
+    found.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    const before = fl.files.length;
+    for (const p of found) if (!fl.files.includes(p)) fl.files.push(p);
+    fl.files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    if (!found.length) toast("Không tìm thấy file PNG/JPG hợp lệ.");
+    if (fl.files.length !== before) fl.render();
+  }
+
+  setupDropzoneVisuals(dropEl);
+  dropEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    addPaths(Array.from(e.dataTransfer.files || []).map(getFilePath).filter(Boolean));
+  });
+  clearBtn.addEventListener("click", () => { fl.clear(); bounds.clear(); });
+
+  // ---- quet alpha cua ca chuoi (chi doc file, cache theo duong dan) ----
+  async function scan() {
+    const token = ++scanToken;
+    const todo = fl.files.filter((p) => !bounds.has(p));
+    for (let i = 0; i < todo.length; i++) {
+      if (token !== scanToken) return;
+      setStatus(`Đang quét ${i + 1}/${todo.length}...`);
+      try { bounds.set(todo[i], await getAlphaBounds(todo[i])); }
+      catch (e) { bounds.set(todo[i], { error: e.message }); }
+    }
+    if (token !== scanToken) return;
+    update();
+  }
+
+  function setStatus(text, warn) {
+    statusEl.textContent = text || "";
+    statusEl.classList.toggle("warn", !!warn);
+  }
+
+  function infos() {
+    return fl.files.map((p) => ({ p, b: bounds.get(p) })).filter((it) => it.b && !it.b.error);
+  }
+
+  /** Tinh khung crop cho tung frame: [{ p, width, height, rect: {x,y,w,h} }], hoac { error }. */
+  function plan() {
+    const list = infos();
+    if (!list.length) return { error: "" };
+    const sizes = new Set(list.map((it) => it.b.width + "x" + it.b.height));
+    const mixed = sizes.size > 1;
+    if (mode === "auto") {
+      const pad = Math.max(0, parseInt(paddingEl.value, 10) || 0);
+      // khung tu bbox (x0..x1, y0..y1) cua anh W×H: giu tam neu can, roi chua le
+      const rectFrom = (x0, y0, x1, y1, W, H) => {
+        if (keepCenterEl.checked) {
+          const cx = Math.min(x0, W - x1), cy = Math.min(y0, H - y1);
+          x0 = cx; x1 = W - cx; y0 = cy; y1 = H - cy;
+        }
+        return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+      };
+      if (scope === "each") {
+        // nhu Smart Crop cu: moi anh crop theo vung ve cua chinh no (anh trong suot hoan toan thi giu nguyen)
+        if (!list.some((it) => it.b.bbox)) return { error: "Các ảnh đều trong suốt, không có gì để crop." };
+        return {
+          mixed: false, each: true,
+          frames: list.map((it) => ({
+            p: it.p, width: it.b.width, height: it.b.height,
+            rect: it.b.bbox
+              ? rectFrom(it.b.bbox.x0, it.b.bbox.y0, it.b.bbox.x1, it.b.bbox.y1, it.b.width, it.b.height)
+              : { x: 0, y: 0, w: it.b.width, h: it.b.height },
+          })),
+        };
+      }
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const { b } of list) {
+        if (!b.bbox) continue;
+        x0 = Math.min(x0, b.bbox.x0); y0 = Math.min(y0, b.bbox.y0);
+        x1 = Math.max(x1, b.bbox.x1); y1 = Math.max(y1, b.bbox.y1);
+      }
+      if (x1 < 0) return { error: "Cả chuỗi đều trong suốt, không có gì để crop." };
+      // giu tam tinh theo frame dau, de pivot ca chuoi khong lech
+      const rect = rectFrom(x0, y0, x1, y1, list[0].b.width, list[0].b.height);
+      return { mixed, frames: list.map((it) => ({ p: it.p, width: it.b.width, height: it.b.height, rect })) };
+    }
+    const w = parseInt(widthEl.value, 10), h = parseInt(heightEl.value, 10);
+    if (!(w > 0) || !(h > 0)) return { error: "Nhập Rộng và Cao (px) hợp lệ." };
+    return {
+      mixed,
+      frames: list.map((it) => ({
+        p: it.p, width: it.b.width, height: it.b.height,
+        rect: { x: Math.round((it.b.width - w) * anchor.ax), y: Math.round((it.b.height - h) * anchor.ay), w, h },
+      })),
+    };
+  }
+
+  function update() {
+    const has = fl.files.length > 0;
+    canvasEl.hidden = !has;
+    emptyStageEl.hidden = has;
+    frameEl.parentElement.hidden = !has;
+    if (!has) { sizeInfoEl.textContent = ""; frameLabelEl.textContent = ""; setStatus(""); return; }
+
+    const idx = Math.min(+frameEl.value, fl.files.length - 1);
+    const p = fl.files[idx];
+    const b = bounds.get(p);
+    frameLabelEl.textContent = `${idx + 1}/${fl.files.length} · ${path.basename(p)}`;
+    const url = require("url").pathToFileURL(p).href + "?v=" + cacheBust;
+    if (imgEl.dataset.src !== url) { imgEl.src = url; imgEl.dataset.src = url; }
+    if (!b || b.error) { rectEl.hidden = true; return; }
+
+    // khung hien thi vua stage, giu dung ti le anh
+    const sw = stageEl.clientWidth - 24, sh = stageEl.clientHeight - 24;
+    const scale = Math.min(sw / b.width, sh / b.height, 4);
+    canvasEl.style.width = b.width * scale + "px";
+    canvasEl.style.height = b.height * scale + "px";
+
+    const res = plan();
+    if (res.error !== undefined) {
+      rectEl.hidden = true;
+      sizeInfoEl.textContent = `${b.width}×${b.height}`;
+      setStatus(res.error, !!res.error);
+      return;
+    }
+    const f = res.frames.find((it) => it.p === p) || res.frames[0];
+    rectEl.hidden = false;
+    rectEl.style.left = f.rect.x * scale + "px";
+    rectEl.style.top = f.rect.y * scale + "px";
+    rectEl.style.width = f.rect.w * scale + "px";
+    rectEl.style.height = f.rect.h * scale + "px";
+    sizeInfoEl.innerHTML = `${b.width}×${b.height} → <b>${f.rect.w}×${f.rect.h}</b>`;
+    const same = res.frames.every((it) => it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height);
+    if (res.each) {
+      const n = res.frames.filter((it) => !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height)).length;
+      setStatus(n ? `${n}/${res.frames.length} ảnh sẽ được crop, mỗi ảnh theo vùng vẽ của riêng nó (kích thước khác nhau).` : "Các ảnh đã vừa khít, không còn phần thừa để crop.");
+    } else if (res.mixed) setStatus("Các frame trong chuỗi không cùng kích thước — vẫn crop được nhưng nên kiểm tra lại.", true);
+    else if (same) setStatus("Chuỗi đã vừa khít, không còn phần thừa để crop.");
+    else setStatus(`${res.frames.length} frame sẽ ra cùng kích thước ${f.rect.w}×${f.rect.h}.`);
+  }
+
+  // ---- dieu khien ----
+  function setMode(m) {
+    mode = m;
+    modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === m));
+    autoFieldsEl.hidden = m !== "auto";
+    sizeFieldsEl.hidden = m !== "size";
+    // mac dinh W×H = vung Auto Crop hien tai, de chinh tiep cho nhanh
+    if (m === "size" && !widthEl.value && !heightEl.value) {
+      const prev = mode; mode = "auto";
+      const r = plan(); mode = prev;
+      if (r.frames) { widthEl.value = r.frames[0].rect.w; heightEl.value = r.frames[0].rect.h; }
+    }
+    update();
+  }
+  modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+  const AUTO_HINT = {
+    shared: "Tự tìm điểm xa nhất có pixel được vẽ trong <b>cả chuỗi</b>, cắt bỏ phần trong suốt thừa. Mọi frame ra cùng 1 kích thước, không lệch vị trí.",
+    each: "Mỗi ảnh tự cắt theo vùng vẽ của <b>chính nó</b>, kích thước ra khác nhau — dùng cho các symbol rời. Bật Giữ tâm ảnh là giống Smart Crop cũ.",
+  };
+  function setScope(v) {
+    scope = v;
+    scopeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.scope === v));
+    autoHintEl.innerHTML = AUTO_HINT[v];
+    update();
+  }
+  scopeToggleEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => setScope(b.dataset.scope)));
+  autoHintEl.innerHTML = AUTO_HINT.shared;
+  anchorEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    anchor = { ax: parseFloat(b.dataset.ax), ay: parseFloat(b.dataset.ay) };
+    anchorEl.querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
+    update();
+  }));
+  [paddingEl, widthEl, heightEl].forEach((el) => el.addEventListener("input", update));
+  keepCenterEl.addEventListener("change", update);
+  frameEl.addEventListener("input", update);
+  new ResizeObserver(() => { if (!document.querySelector('.tab-panel[data-panel="cropfbf"]').hidden) update(); }).observe(stageEl);
+
+  async function runCropFbf() {
+    if (busy) return { success: 0, failed: [] };
+    if (!fl.files.length) { toast("Hãy thêm chuỗi hình trước."); return { success: 0, failed: [] }; }
+    await scan();
+    const res = plan();
+    if (res.error !== undefined) { toast(res.error || "Chưa quét xong chuỗi hình."); return { success: 0, failed: [] }; }
+    const todo = res.frames.filter((it) => !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height));
+    if (!todo.length) { toast("Không có gì để crop."); return { success: 0, failed: [] }; }
+    busy = true;
+    runBtn.disabled = true;
+    let success = 0;
+    const failed = [];
+    for (let i = 0; i < todo.length; i++) {
+      setStatus(`Đang crop ${i + 1}/${todo.length}...`);
+      try { await cropToRect(todo[i].p, todo[i].rect); success++; }
+      catch (e) { failed.push(`${path.basename(todo[i].p)}: ${e.message}`); }
+      bounds.delete(todo[i].p);
+    }
+    busy = false;
+    runBtn.disabled = false;
+    cacheBust++; // anh da doi, nap lai
+    if (failed.length) { toast(`Crop ${success} file, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
+    else toast(res.each ? `Đã crop ${success} ảnh.` : `Đã crop ${success} file về ${todo[0].rect.w}×${todo[0].rect.h}.`);
+    await scan();
+    return { success, failed };
+  }
+  runBtn.addEventListener("click", runCropFbf);
+
+  update();
+  window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
 })();
 
 // ============================================================

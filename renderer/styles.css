@@ -157,6 +157,7 @@ button:not(:disabled):active { transform: scale(.95); transition-duration: .06s;
 .content-body { flex: 1; padding: 20px 24px; overflow: auto; }
 
 .tab-panel:not([hidden]) > * { animation: fx-rise .45s var(--ease-out) both; }
+.tab-panel[data-panel="cropfbf"]:not([hidden]) { height: 100%; }
 .tab-panel:not([hidden]) > *:nth-child(2) { animation-delay: .06s; }
 .tab-panel:not([hidden]) > *:nth-child(3) { animation-delay: .12s; }
 .tab-panel:not([hidden]) > *:nth-child(4) { animation-delay: .18s; }
@@ -384,6 +385,58 @@ kbd {
 .fv-pl-item:hover .fv-pl-del, .fv-pl-item.active .fv-pl-del { opacity: 1; }
 .fv-pl-del:hover { background: var(--red-soft); color: var(--red); }
 .fv-pl-empty { margin: auto 0; padding: 20px 14px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* ===== Crop FBF ===== */
+.cf-layout { display: flex; gap: 20px; height: 100%; min-height: 0; }
+.cf-left { width: 380px; flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; }
+.cf-right { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cf-options { margin-bottom: 12px; }
+.cf-scope { margin-bottom: 12px; }
+.cf-scope .mode-btn { padding: 5px 11px; font-size: 11.5px; }
+.cf-drop { flex: 1; min-height: 160px; }
+.cf-preview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.cf-size { font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.cf-size b { color: #fff; font-weight: 600; }
+.cf-stage {
+  flex: 1; min-height: 200px; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 8px;
+  background-color: var(--stage);
+  background-image:
+    linear-gradient(45deg, #303238 25%, transparent 25%), linear-gradient(-45deg, #303238 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #303238 75%), linear-gradient(-45deg, transparent 75%, #303238 75%);
+  background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.cf-canvas { position: relative; outline: 1px dashed rgba(255, 255, 255, .25); }
+.cf-canvas img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.cf-rect {
+  position: absolute; border: 2px dashed var(--red); pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(15, 16, 19, .55);
+  transition: left var(--t-med) var(--ease-out), top var(--t-med) var(--ease-out), width var(--t-med) var(--ease-out), height var(--t-med) var(--ease-out);
+}
+.cf-empty { color: var(--faint); font-size: 12.5px; }
+.cf-frame-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.cf-frame-row input[type=range] { flex: 1; }
+.cf-frame-label { font: 11.5px var(--mono); color: var(--muted); white-space: nowrap; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+.cf-status { font-size: 11.5px; color: var(--muted); min-height: 16px; margin-top: 6px; }
+.cf-status.warn { color: var(--warn); }
+
+.anchor-grid { display: grid; grid-template-columns: repeat(3, 14px); gap: 4px; padding: 5px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.anchor-grid button { width: 14px; height: 14px; padding: 0; border-radius: 3px; border: 1px solid #4A4F59; background: transparent; cursor: pointer; }
+.anchor-grid button:hover { border-color: var(--red); }
+.anchor-grid button.active { background: var(--red); border-color: var(--red); animation: pop var(--t-med) var(--ease-spring); }
+
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+input[type=checkbox] {
+  appearance: none; width: 16px; height: 16px; margin: 0; border: 1.5px solid #5A5F69; border-radius: 4px;
+  background: var(--panel); display: inline-grid; place-content: center; cursor: pointer; flex: 0 0 auto;
+}
+input[type=checkbox]:hover { border-color: var(--red); }
+input[type=checkbox]::after {
+  content: ''; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0;
+  transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform var(--t-med) var(--ease-spring);
+}
+input[type=checkbox]:checked { background: var(--red); border-color: var(--red); }
+input[type=checkbox]:checked::after { transform: translateY(-1px) rotate(-45deg) scale(1); }
 
 /* ===== nút dùng chung cho màn hình key / bảng Admin ===== */
 .text-btn, .icon-btn {
