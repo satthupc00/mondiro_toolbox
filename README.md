@@ -69,17 +69,20 @@ Icon "Sprite Drawer" (lưới 4 ô, 1 ô đỏ đang trượt ra), không có kh
 
 ## Các tool bên trong
 
-- **Merge Atlas** — kéo 1 file PNG muốn giữ lại, tool tự xoá các PNG thừa trong cùng thư mục và
-  cập nhật lại file `.atlas` trỏ đúng tên file đó (phục vụ pipeline Spine).
+- **Merge Atlas** — kéo 1 file PNG muốn giữ lại; app hiện trước danh sách **sẽ thực hiện** (PNG giữ,
+  các PNG thừa sẽ xoá, dòng nào trong `.atlas` sẽ đổi tên) và xem trước ảnh. Mặc định PNG thừa được
+  **đưa vào Thùng rác** (khôi phục được), bỏ tick để xoá hẳn. Atlas nhiều trang sẽ được cảnh báo.
 - **Blur Symbols** — batch motion blur (theo chiều dọc) + chỉnh Lightness cho PNG symbol, không cần
-  Photoshop. Thuật toán port lại 1:1 từ bản Python đã test (premultiplied alpha để không lem viền,
-  chỉnh Lightness qua không gian màu HSL giữ nguyên Hue/Saturation).
+  Photoshop. Thanh trượt + ô số cho từng thông số, **xem trước trực tiếp** kết quả (nút Trước/Sau,
+  click tên file để xem file khác). Thuật toán port 1:1 từ bản Python (premultiplied alpha để không
+  lem viền, chỉnh Lightness qua HSL giữ nguyên Hue/Saturation). Ghi đè file gốc.
 - **Rename** — 2 chế độ: **Đặt tên mới** (hậu tố `##` để tự đánh số thứ tự) và **Tìm và thay thế**
   (ô **Tìm** + ô **Thay bằng**, áp dụng cho mọi file có chứa chữ cần tìm, không phân biệt hoa/thường;
   để trống ô Thay bằng thì xóa luôn chữ đó và tự gọn dấu nối thừa, vd `walk_noCT_00` → `walk_00`).
   Danh sách xem trước tên mới; file trùng tên, đã tồn tại, tên trống hoặc có ký tự không hợp lệ sẽ được báo và bỏ qua.
-- **Resize** — scale hàng loạt theo % hoặc theo pixel (chỉ cần nhập Rộng hoặc Cao, chiều còn lại
-  tự tính theo đúng tỉ lệ ảnh gốc của từng file), ghi đè trực tiếp lên file gốc.
+- **Resize** — scale hàng loạt theo % (thanh trượt + nút nhanh 25/50/75/150/200%) hoặc theo pixel
+  (chỉ cần nhập Rộng hoặc Cao, chiều còn lại tự tính theo đúng tỉ lệ ảnh gốc của từng file).
+  Xem trước kích thước **cũ → mới** với khung so sánh. Ghi đè trực tiếp lên file gốc.
 - **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
   ... `walk_23.png`). App quét cả folder con, mỗi chuỗi ảnh thành 1 dòng trong **Playlist** bên trái
   (folder có nhiều chuỗi khác tên thì hiện `tên folder / tên chuỗi`). Click tên nào thì play chuỗi đó.
