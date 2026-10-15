@@ -79,40 +79,94 @@
     <div class="content-body">
 
       <!-- ATLAS -->
-      <section class="tab-panel" data-panel="atlas">
-        <div class="atlas-wrap">
-          <div class="dropzone dz-standard" id="atlasDrop">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-            <span id="atlasDropLabel">Kéo file PNG muốn giữ lại vào đây</span>
+      <section class="tab-panel tool-2col" data-panel="atlas">
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="dropzone cf-drop atlas-drop" id="atlasDrop">
+              <div class="dz-empty" id="atlasDropEmpty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo file PNG muốn giữ lại vào đây</span>
+              </div>
+              <div class="atlas-picked" id="atlasPicked" hidden>
+                <span class="field-label" style="margin:0 0 4px;">PNG giữ lại</span>
+                <div class="atlas-picked-name" id="atlasDropLabel"></div>
+                <div class="atlas-picked-dir" id="atlasPickedDir"></div>
+              </div>
+            </div>
+            <div class="panel-card atlas-plan" id="atlasPlan" hidden>
+              <span class="field-label">Sẽ thực hiện</span>
+              <div class="atlas-plan-list" id="atlasPlanList"></div>
+            </div>
+            <label class="check" style="margin-top:12px;" title="File PNG bị xóa sẽ nằm trong Thùng rác, lấy lại được nếu lỡ tay">
+              <input type="checkbox" id="atlasTrash" checked> Xóa PNG thừa vào Thùng rác (khôi phục được)
+            </label>
+            <div class="tool-actions">
+              <button class="btn btn-primary" id="atlasMergeBtn">Merge Atlas</button>
+              <button class="btn btn-ghost" id="atlasClearBtn">Bỏ chọn</button>
+            </div>
           </div>
-          <button class="btn btn-primary" id="atlasMergeBtn">Merge Atlas</button>
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <span class="cf-size" id="atlasSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="atlasStage">
+              <div class="cf-canvas" id="atlasCanvas" hidden>
+                <img id="atlasImg" alt="">
+              </div>
+              <div class="cf-empty" id="atlasEmpty">Chưa có hình</div>
+            </div>
+            <div class="cf-status" id="atlasStatus"></div>
+          </div>
         </div>
       </section>
 
       <!-- BLUR -->
-      <section class="tab-panel" data-panel="blur" hidden>
-        <div class="panel-card field-row" style="max-width:480px;">
-          <div>
-            <span class="field-label">Mức độ Blur</span>
-            <input class="input input-short" id="blurAmount" value="20">
+      <section class="tab-panel tool-2col" data-panel="blur" hidden>
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="panel-card cf-options">
+              <div class="slider-field">
+                <span class="field-label">Mức độ Blur</span>
+                <div class="slider-row"><input type="range" id="blurAmountRange" min="0" max="100" value="20"><input class="input input-short" id="blurAmount" value="20"></div>
+              </div>
+              <div class="slider-field" style="margin-top:12px;">
+                <span class="field-label">Lightness</span>
+                <div class="slider-row"><input type="range" id="blurLightnessRange" min="-100" max="100" value="-20"><input class="input input-short" id="blurLightness" value="-20"></div>
+              </div>
+              <p class="field-hint" style="margin:10px 0 0;">Motion blur theo chiều dọc + tăng/giảm sáng (giữ nguyên màu). Ghi đè file gốc.</p>
+            </div>
+            <div class="dropzone cf-drop" id="blurDrop">
+              <div class="dz-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo thả Static Symbols vào đây</span>
+              </div>
+              <div class="filelist dz-list" id="blurList" hidden></div>
+            </div>
+            <div class="tool-actions">
+              <button class="btn btn-primary" id="blurApplyBtn">Apply To All</button>
+              <button class="btn btn-ghost" id="blurClearBtn">Xóa hết</button>
+            </div>
+            <div id="blurStatus" hidden></div>
           </div>
-          <div>
-            <span class="field-label">Lightness</span>
-            <input class="input input-short" id="blurLightness" value="-20">
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <div class="mode-toggle ba-toggle" id="blurBeforeAfter">
+                <button class="mode-btn" data-view="before" type="button" title="Ảnh gốc">Trước</button>
+                <button class="mode-btn active" data-view="after" type="button" title="Kết quả sau khi Blur">Sau</button>
+              </div>
+              <span class="cf-size" id="blurPvSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="blurPvStage">
+              <div class="cf-canvas" id="blurPvCanvas" hidden>
+                <img id="blurPvImg" alt="">
+              </div>
+              <div class="cf-empty" id="blurPvEmpty">Chưa có hình</div>
+            </div>
+            <div class="cf-status" id="blurPvStatus"></div>
           </div>
         </div>
-        <div class="dropzone dz-standard" id="blurDrop" style="margin-top:14px;">
-          <div class="dz-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-            <span>Kéo thả Static Symbols vào đây</span>
-          </div>
-          <div class="filelist dz-list" id="blurList" hidden></div>
-        </div>
-        <div style="margin-top:12px; display:flex; gap:10px;">
-          <button class="btn btn-primary" id="blurApplyBtn">Apply To All</button>
-          <button class="btn btn-ghost" id="blurClearBtn">Xóa hết</button>
-        </div>
-        <div id="blurStatus" style="margin-top:10px; font:500 12px 'Inter',sans-serif; color:var(--text-faint);"></div>
       </section>
 
       <!-- RENAME -->
@@ -154,45 +208,66 @@
       </section>
 
       <!-- RESIZE -->
-      <section class="tab-panel" data-panel="resize" hidden>
-        <div class="mode-toggle" id="resizeModeToggle">
-          <button class="mode-btn active" data-mode="percent" type="button">Theo %</button>
-          <button class="mode-btn" data-mode="pixel" type="button">Theo Pixel</button>
-        </div>
-
-        <div id="resizePercentFields">
-          <span class="field-label">Tỉ lệ resize</span>
-          <div class="input-suffix-wrap" style="max-width:140px; margin-bottom:18px;">
-            <input class="input" id="resizePercent" value="100">
-            <span class="input-suffix">%</span>
-          </div>
-        </div>
-
-        <div class="panel-card" id="resizePixelFields" style="max-width:480px; margin-bottom:18px; display:none;">
-          <div class="badge-warn block" id="resizeSizeWarning" style="display:none; margin-bottom:12px;">⚠ Chuỗi ảnh có nhiều size khác nhau nên không hợp lệ để resize theo pixel. Hãy dùng chế độ Theo % thay thế.</div>
-          <div class="field-row">
-            <div>
-              <span class="field-label">Rộng (px)</span>
-              <input class="input input-short" id="resizeWidth" placeholder="tự tính">
+      <section class="tab-panel tool-2col" data-panel="resize" hidden>
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="mode-toggle" id="resizeModeToggle">
+              <button class="mode-btn active" data-mode="percent" type="button">Theo %</button>
+              <button class="mode-btn" data-mode="pixel" type="button">Theo Pixel</button>
             </div>
-            <div>
-              <span class="field-label">Cao (px)</span>
-              <input class="input input-short" id="resizeHeight" placeholder="tự tính">
+            <div class="panel-card cf-options" id="resizePercentFields">
+              <span class="field-label">Tỉ lệ resize</span>
+              <div class="slider-row">
+                <input type="range" id="resizePercentRange" min="5" max="200" value="100">
+                <div class="input-suffix-wrap" style="width:96px;"><input class="input" id="resizePercent" value="100"><span class="input-suffix">%</span></div>
+              </div>
+              <div class="chip-row" id="resizePresets">
+                <button class="mode-btn" type="button" data-pct="25">25%</button>
+                <button class="mode-btn" type="button" data-pct="50">50%</button>
+                <button class="mode-btn" type="button" data-pct="75">75%</button>
+                <button class="mode-btn" type="button" data-pct="150">150%</button>
+                <button class="mode-btn" type="button" data-pct="200">200%</button>
+              </div>
+            </div>
+            <div class="panel-card cf-options" id="resizePixelFields" style="display:none;">
+              <div class="badge-warn block" id="resizeSizeWarning" style="display:none; margin-bottom:12px;">⚠ Chuỗi ảnh có nhiều size khác nhau nên không hợp lệ để resize theo pixel. Hãy dùng chế độ Theo % thay thế.</div>
+              <div class="field-row" style="gap:16px;">
+                <div>
+                  <span class="field-label">Rộng (px)</span>
+                  <input class="input input-short" id="resizeWidth" placeholder="tự tính">
+                </div>
+                <div>
+                  <span class="field-label">Cao (px)</span>
+                  <input class="input input-short" id="resizeHeight" placeholder="tự tính">
+                </div>
+              </div>
+              <p class="field-hint" style="margin:10px 0 0;">Mặc định là kích thước hiện tại của ảnh. Nhập 1 chiều, chiều còn lại tự tính theo đúng tỉ lệ ảnh gốc của từng file.</p>
+            </div>
+            <div class="dropzone cf-drop" id="resizeDrop">
+              <div class="dz-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo thả PNG/JPG vào đây</span>
+              </div>
+              <div class="filelist dz-list" id="resizeList" hidden></div>
+            </div>
+            <div class="tool-actions">
+              <button class="btn btn-primary" id="resizeRunBtn">Resize ngay</button>
+              <button class="btn btn-ghost" id="resizeClearBtn">Xóa hết</button>
             </div>
           </div>
-          <p style="font:400 11px 'Inter',sans-serif; color:var(--text-faint); margin:10px 0 0;">Mặc định là kích thước hiện tại của ảnh. Nhập 1 chiều, chiều còn lại tự tính theo đúng tỉ lệ ảnh gốc của từng file.</p>
-        </div>
-
-        <div class="dropzone dz-standard" id="resizeDrop">
-          <div class="dz-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-            <span>Kéo thả PNG/JPG vào đây</span>
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <span class="cf-size" id="resizePvSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="resizePvStage">
+              <div class="cf-canvas" id="resizePvCanvas" hidden>
+                <img id="resizePvImg" alt="">
+              </div>
+              <div class="cf-empty" id="resizePvEmpty">Chưa có hình</div>
+            </div>
+            <div class="cf-status" id="resizePvStatus"></div>
           </div>
-          <div class="filelist dz-list" id="resizeList" hidden></div>
-        </div>
-        <div style="margin-top:12px; display:flex; gap:10px;">
-          <button class="btn btn-primary" id="resizeRunBtn">Resize ngay</button>
-          <button class="btn btn-ghost" id="resizeClearBtn">Xóa hết</button>
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { blurSymbol, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
+const { blurSymbol, blurSymbolPreview, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
 
 let webUtils = null;
 try { webUtils = require("electron").webUtils; } catch (e) { /* fallback file.path */ }
@@ -84,14 +84,145 @@ function setupDropzoneVisuals(el) {
   el.addEventListener("drop", () => el.classList.remove("dragover"));
 }
 
+// Khung xem truoc dung chung (cot phai cua Merge Atlas / Blur / Resize): anh vua khit stage, giu ti le.
+function makePreviewPane(prefix) {
+  const stageEl = document.getElementById(prefix + "Stage");
+  const canvasEl = document.getElementById(prefix + "Canvas");
+  const imgEl = document.getElementById(prefix + "Img");
+  const emptyEl = document.getElementById(prefix + "Empty");
+  const infoEl = document.getElementById(prefix + "SizeInfo");
+  const statusEl = document.getElementById(prefix + "Status");
+  let last = null; // { url, w, h, ghost }
+  let ghostEl = null;
+
+  function fit() {
+    if (!last || stageEl.clientWidth === 0) return;
+    const { w, h, ghost } = last;
+    const bw = Math.max(w, ghost ? ghost.w : 0), bh = Math.max(h, ghost ? ghost.h : 0);
+    const scale = Math.min((stageEl.clientWidth - 24) / bw, (stageEl.clientHeight - 24) / bh, 4);
+    canvasEl.style.width = w * scale + "px";
+    canvasEl.style.height = h * scale + "px";
+    if (ghost) {
+      if (!ghostEl) { ghostEl = document.createElement("div"); ghostEl.className = "resize-ghost"; stageEl.appendChild(ghostEl); }
+      ghostEl.hidden = false;
+      ghostEl.style.width = ghost.w * scale + "px";
+      ghostEl.style.height = ghost.h * scale + "px";
+      ghostEl.style.left = (stageEl.clientWidth - ghost.w * scale) / 2 + "px";
+      ghostEl.style.top = (stageEl.clientHeight - ghost.h * scale) / 2 + "px";
+    } else if (ghostEl) ghostEl.hidden = true;
+  }
+  new ResizeObserver(fit).observe(stageEl);
+
+  return {
+    /** url: anh can hien; w,h: kich thuoc hien thi (px that); ghost: {w,h} khung so sanh (vd kich thuoc goc) */
+    show(url, w, h, ghost) {
+      last = { url, w, h, ghost: ghost || null };
+      canvasEl.hidden = false;
+      emptyEl.hidden = true;
+      if (imgEl.dataset.src !== url) { imgEl.src = url; imgEl.dataset.src = url; }
+      fit();
+    },
+    clear(text) {
+      last = null;
+      canvasEl.hidden = true;
+      emptyEl.hidden = false;
+      emptyEl.textContent = text || "Chưa có hình";
+      if (ghostEl) ghostEl.hidden = true;
+      infoEl.innerHTML = "";
+    },
+    info(html) { infoEl.innerHTML = html || ""; },
+    status(text, warn) { statusEl.textContent = text || ""; statusEl.classList.toggle("warn", !!warn); },
+  };
+}
+
+const fileUrlOf = (p, v) => require("url").pathToFileURL(p).href + (v ? "?v=" + v : "");
+const sizeCache = new Map(); // filePath -> { width, height } (xoa khi file bi sua)
+async function cachedSize(p) {
+  if (!sizeCache.has(p)) sizeCache.set(p, await getImageSize(p));
+  return sizeCache.get(p);
+}
+
 // ============================================================
 // MERGE ATLAS
 // ============================================================
 (function initAtlas() {
+  const { shell } = require("electron");
   const dropEl = document.getElementById("atlasDrop");
+  const dropEmptyEl = document.getElementById("atlasDropEmpty");
+  const pickedEl = document.getElementById("atlasPicked");
   const labelEl = document.getElementById("atlasDropLabel");
+  const pickedDirEl = document.getElementById("atlasPickedDir");
+  const planEl = document.getElementById("atlasPlan");
+  const planListEl = document.getElementById("atlasPlanList");
+  const trashEl = document.getElementById("atlasTrash");
   const mergeBtn = document.getElementById("atlasMergeBtn");
+  const clearBtn = document.getElementById("atlasClearBtn");
+  const pane = makePreviewPane("atlas");
   let selectedFile = null;
+  let version = 0;
+
+  /** Doc thu muc cua PNG duoc giu: PNG se xoa, file .atlas va dong .png dau tien se doi ten. */
+  function plan() {
+    const folder = path.dirname(selectedFile);
+    const pngName = path.basename(selectedFile);
+    const names = fs.readdirSync(folder);
+    const toDelete = names.filter((f) => f.toLowerCase().endsWith(".png") && f !== pngName);
+    const atlases = names.filter((f) => f.toLowerCase().endsWith(".atlas")).map((f) => {
+      const lines = fs.readFileSync(path.join(folder, f), "utf-8").split("\n");
+      const pngLines = lines.map((l, i) => ({ l: l.trim(), i })).filter((x) => x.l.toLowerCase().endsWith(".png"));
+      return { name: f, lines, first: pngLines[0] || null, pages: pngLines.length };
+    });
+    return { folder, pngName, toDelete, atlases };
+  }
+
+  function row(tag, cls, name) {
+    const r = document.createElement("div");
+    r.className = "plan-row " + cls;
+    const t = document.createElement("span");
+    t.className = "tag " + cls;
+    t.textContent = tag;
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = name;
+    r.append(t, n);
+    return r;
+  }
+
+  async function refresh() {
+    const has = !!selectedFile;
+    dropEmptyEl.hidden = has;
+    pickedEl.hidden = !has;
+    planEl.hidden = !has;
+    if (!has) { pane.clear(); pane.status(""); return; }
+    labelEl.textContent = path.basename(selectedFile);
+    pickedDirEl.textContent = path.dirname(selectedFile);
+    let p;
+    try { p = plan(); } catch (e) { pane.status("Không đọc được thư mục: " + e.message, true); return; }
+    planListEl.innerHTML = "";
+    planListEl.appendChild(row("GIỮ", "keep", p.pngName));
+    p.toDelete.forEach((f) => planListEl.appendChild(row("XÓA", "del", f)));
+    const notes = [];
+    p.atlases.forEach((a) => {
+      if (a.first && a.first.l !== p.pngName) planListEl.appendChild(row("ATLAS", "edit", `${a.name}: ${a.first.l} → ${p.pngName}`));
+      if (a.pages > 1) notes.push(`${a.name} có ${a.pages} trang PNG — chỉ trang đầu được đổi tên.`);
+    });
+    if (!p.atlases.length) notes.push("Không thấy file .atlas trong thư mục này.");
+    planListEl.querySelectorAll(".plan-note").forEach((n) => n.remove());
+    notes.forEach((t) => { const n = document.createElement("div"); n.className = "plan-note"; n.textContent = "⚠ " + t; planListEl.appendChild(n); });
+    try {
+      const sz = await cachedSize(selectedFile);
+      pane.show(fileUrlOf(selectedFile, version), sz.width, sz.height);
+      pane.info(`<b>${sz.width}×${sz.height}</b>`);
+    } catch (e) { pane.clear("Không đọc được ảnh"); }
+    const nothing = !p.toDelete.length && !p.atlases.some((a) => a.first && a.first.l !== p.pngName);
+    pane.status(nothing ? "Thư mục đã gọn, không còn gì để merge." : `Sẽ xóa ${p.toDelete.length} PNG thừa${p.atlases.length ? ` và cập nhật ${p.atlases.length} file .atlas` : ""}.`);
+  }
+
+  function setSelected(p) {
+    selectedFile = p;
+    sizeCache.delete(p);
+    refresh();
+  }
 
   setupDropzoneVisuals(dropEl);
   dropEl.addEventListener("drop", (e) => {
@@ -99,41 +230,32 @@ function setupDropzoneVisuals(el) {
     const files = Array.from(e.dataTransfer.files || []);
     if (!files.length) return;
     const filePath = getFilePath(files[0]);
-    if (!filePath || !filePath.toLowerCase().endsWith(".png")) {
-      toast("Chỉ nhận file PNG");
-      return;
-    }
-    selectedFile = filePath;
-    labelEl.textContent = "File: " + path.basename(filePath);
+    if (!filePath || !filePath.toLowerCase().endsWith(".png")) { toast("Chỉ nhận file PNG"); return; }
+    setSelected(filePath);
   });
+  clearBtn.addEventListener("click", () => setSelected(null));
 
-  function runMerge() {
-    if (!selectedFile) {
-      toast("Chưa chọn file PNG");
-      return false;
-    }
+  async function runMerge() {
+    if (!selectedFile) { toast("Chưa chọn file PNG"); return false; }
     try {
-      const folder = path.dirname(selectedFile);
-      const pngName = path.basename(selectedFile);
-
-      for (const f of fs.readdirSync(folder)) {
-        if (f.toLowerCase().endsWith(".png") && f !== pngName) {
-          try { fs.unlinkSync(path.join(folder, f)); } catch (e) {}
-        }
+      const p = plan();
+      for (const f of p.toDelete) {
+        const fp = path.join(p.folder, f);
+        try {
+          if (trashEl.checked) await shell.trashItem(fp);
+          else fs.unlinkSync(fp);
+        } catch (e) { console.error(fp, e); }
       }
-      for (const f of fs.readdirSync(folder)) {
-        if (f.toLowerCase().endsWith(".atlas")) {
-          const atlasPath = path.join(folder, f);
-          try {
-            const lines = fs.readFileSync(atlasPath, "utf-8").split("\n");
-            for (let i = 0; i < lines.length; i++) {
-              if (lines[i].includes(".png")) { lines[i] = pngName; break; }
-            }
-            fs.writeFileSync(atlasPath, lines.join("\n"));
-          } catch (e) {}
-        }
+      for (const a of p.atlases) {
+        if (!a.first) continue;
+        try {
+          a.lines[a.first.i] = p.pngName;
+          fs.writeFileSync(path.join(p.folder, a.name), a.lines.join("\n"));
+        } catch (e) { console.error(a.name, e); }
       }
-      toast("Đã merge xong");
+      toast(trashEl.checked ? "Đã merge xong (PNG thừa nằm trong Thùng rác)." : "Đã merge xong");
+      version++;
+      refresh();
       return true;
     } catch (e) {
       toast("Lỗi: " + e.message);
@@ -142,9 +264,11 @@ function setupDropzoneVisuals(el) {
   }
 
   mergeBtn.addEventListener("click", runMerge);
+  refresh();
   window.__atlasTest = {
-    setSelectedFile: (p) => { selectedFile = p; labelEl.textContent = "File: " + path.basename(p); },
+    setSelectedFile: (p) => setSelected(p),
     run: runMerge,
+    trashEl,
   };
 })();
 
@@ -205,7 +329,12 @@ function makeSimpleFileList(listEl, { acceptExt = [".png"], onChange } = {}) {
     }
   });
 
-  return { files, add, render, removeAt, clear };
+  // vi tri dong dang chon dau tien (de xem truoc), -1 neu chua chon
+  function selected() {
+    return selectedIdx.size ? Math.min(...selectedIdx) : -1;
+  }
+
+  return { files, add, render, removeAt, clear, selected };
 }
 
 // A dropzone whose empty-state placeholder (icon+text) swaps for an inline
@@ -243,12 +372,77 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const dropEl = document.getElementById("blurDrop");
   const applyBtn = document.getElementById("blurApplyBtn");
   const clearBtn = document.getElementById("blurClearBtn");
-  const statusEl = document.getElementById("blurStatus");
   const amountEl = document.getElementById("blurAmount");
   const lightEl = document.getElementById("blurLightness");
-  const fl = makeDropzoneFileList(dropEl);
+  const amountRangeEl = document.getElementById("blurAmountRange");
+  const lightRangeEl = document.getElementById("blurLightnessRange");
+  const baEl = document.getElementById("blurBeforeAfter");
+  const pane = makePreviewPane("blurPv");
+  let view = "after"; // "before" | "after"
+  let version = 0;
+  let previewToken = 0;
+  let previewTimer = null;
+  const previewCache = new Map(); // "path|blur|light|version" -> { dataUrl, width, height }
 
-  clearBtn.addEventListener("click", () => { fl.clear(); statusEl.textContent = ""; });
+  const fl = makeDropzoneFileList(dropEl, { onChange: () => schedulePreview(0) });
+  clearBtn.addEventListener("click", () => fl.clear());
+
+  // thanh truot va o so luon khop nhau
+  function link(rangeEl, inputEl) {
+    rangeEl.addEventListener("input", () => { inputEl.value = rangeEl.value; schedulePreview(); });
+    inputEl.addEventListener("input", () => {
+      const v = parseFloat(inputEl.value);
+      if (Number.isFinite(v)) rangeEl.value = v;
+      schedulePreview();
+    });
+  }
+  link(amountRangeEl, amountEl);
+  link(lightRangeEl, lightEl);
+
+  baEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => {
+    view = b.dataset.view;
+    baEl.querySelectorAll(".mode-btn").forEach((x) => x.classList.toggle("active", x === b));
+    schedulePreview(0);
+  }));
+
+  function previewFile() {
+    if (!fl.files.length) return null;
+    const i = fl.selected();
+    return fl.files[i >= 0 ? i : 0];
+  }
+
+  function schedulePreview(delay = 160) {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(renderPreview, delay);
+  }
+
+  async function renderPreview() {
+    const p = previewFile();
+    if (!p) { pane.clear(); pane.status(""); return; }
+    const token = ++previewToken;
+    const blur = parseFloat(amountEl.value) || 0;
+    const light = parseInt(lightEl.value, 10) || 0;
+    try {
+      const sz = await cachedSize(p);
+      if (token !== previewToken) return;
+      pane.info(`<b>${sz.width}×${sz.height}</b>`);
+      if (view === "before") {
+        pane.show(fileUrlOf(p, version), sz.width, sz.height);
+      } else {
+        const key = [p, blur, light, version].join("|");
+        if (!previewCache.has(key)) {
+          pane.status("Đang tạo xem trước...");
+          previewCache.set(key, await blurSymbolPreview(p, blur, light));
+          if (previewCache.size > 40) previewCache.delete(previewCache.keys().next().value);
+        }
+        if (token !== previewToken) return;
+        pane.show(previewCache.get(key).dataUrl, sz.width, sz.height);
+      }
+      pane.status(`${view === "before" ? "Ảnh gốc" : "Kết quả"}: ${path.basename(p)}${fl.files.length > 1 ? " · click tên file để xem file khác" : ""}`);
+    } catch (e) {
+      if (token === previewToken) pane.status("Không xem trước được: " + e.message, true);
+    }
+  }
 
   async function runApply() {
     if (!fl.files.length) { toast("Hãy thêm PNG trước."); return; }
@@ -259,15 +453,21 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     applyBtn.disabled = true;
     const failed = [];
     for (let i = 0; i < fl.files.length; i++) {
-      statusEl.textContent = `Processing ${i + 1}/${fl.files.length}`;
+      pane.status(`Đang xử lý ${i + 1}/${fl.files.length}...`);
       try {
         await blurSymbol(fl.files[i], blur, lightness);
+        sizeCache.delete(fl.files[i]);
       } catch (e) {
         failed.push(`${path.basename(fl.files[i])}: ${e.message}`);
       }
     }
-    statusEl.textContent = "Done!";
     applyBtn.disabled = false;
+    version++;
+    // file goc da doi: chuyen sang xem anh that (Truoc = ban vua ghi de)
+    view = "before";
+    baEl.querySelectorAll(".mode-btn").forEach((x) => x.classList.toggle("active", x.dataset.view === "before"));
+    await renderPreview();
+    pane.status(failed.length ? `Xong, lỗi ${failed.length} file.` : `Đã xử lý ${fl.files.length} file — đang hiện ảnh sau khi ghi đè.`, !!failed.length);
     if (failed.length) toast(`Xong với ${failed.length} lỗi — xem console.`);
     else toast(`Đã xử lý ${fl.files.length} file.`);
     if (failed.length) console.error("Blur errors:\n" + failed.join("\n"));
@@ -275,7 +475,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   }
 
   applyBtn.addEventListener("click", runApply);
-  window.__blurTest = { fl, run: runApply, amountEl, lightEl };
+  window.__blurTest = { fl, run: runApply, amountEl, lightEl, renderPreview };
 })();
 
 // ============================================================
@@ -472,6 +672,11 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const percentFieldsEl = document.getElementById("resizePercentFields");
   const pixelFieldsEl = document.getElementById("resizePixelFields");
   const warningEl = document.getElementById("resizeSizeWarning");
+  const pctRangeEl = document.getElementById("resizePercentRange");
+  const presetsEl = document.getElementById("resizePresets");
+  const pane = makePreviewPane("resizePv");
+  let version = 0;
+  let previewToken = 0;
 
   let mode = "percent"; // "percent" | "pixel"
   let refW = null, refH = null; // kich thuoc file dau tien — dung de preview ti le truc tiep tren UI
@@ -483,7 +688,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   let pendingRefresh = Promise.resolve();
 
   const fl = makeDropzoneFileList(dropEl, {
-    onChange: () => { pendingRefresh = refreshReferenceDims(); },
+    onChange: () => { pendingRefresh = refreshReferenceDims().then(renderPreview); },
   });
 
   function setSizeWarning(show) {
@@ -536,12 +741,69 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     heightEl.value = refH;
   }
 
+  // ---- xem truoc: kich thuoc cu -> moi (tinh y het luc resize that) ----
+  function targetSize(sz) {
+    if (mode === "percent") {
+      const s = (parseFloat(pctEl.value) || 0) / 100;
+      if (!(s > 0)) return null;
+      return { w: Math.max(1, Math.round(sz.width * s)), h: Math.max(1, Math.round(sz.height * s)) };
+    }
+    if (sizesMismatched) return null;
+    let w = parsePositiveIntOrNull(widthEl.value), h = parsePositiveIntOrNull(heightEl.value);
+    if (lastDriver === "width") h = null;
+    if (lastDriver === "height") w = null;
+    if (!w && !h) return null;
+    if (w && !h) h = Math.round(sz.height * (w / sz.width));
+    else if (h && !w) w = Math.round(sz.width * (h / sz.height));
+    return { w: Math.max(1, w), h: Math.max(1, h) };
+  }
+
+  async function renderPreview() {
+    if (!fl.files.length) { pane.clear(); pane.status(""); return; }
+    const token = ++previewToken;
+    const i = fl.selected();
+    const p = fl.files[i >= 0 ? i : 0];
+    try {
+      const sizes = await Promise.all(fl.files.map(cachedSize));
+      if (token !== previewToken) return;
+      const sz = sizes[fl.files.indexOf(p)];
+      const t = targetSize(sz);
+      if (!t) {
+        pane.show(fileUrlOf(p, version), sz.width, sz.height);
+        pane.info(`${sz.width}×${sz.height}`);
+        pane.status(mode === "pixel" && sizesMismatched ? "Chuỗi ảnh có nhiều size khác nhau — dùng chế độ Theo %." : "Nhập kích thước hợp lệ.", true);
+        return;
+      }
+      pane.show(fileUrlOf(p, version), t.w, t.h, { w: sz.width, h: sz.height });
+      pane.info(`${sz.width}×${sz.height} → <b>${t.w}×${t.h}</b>`);
+      const mixed = sizes.some((x) => x.width !== sizes[0].width || x.height !== sizes[0].height);
+      const same = t.w === sz.width && t.h === sz.height;
+      pane.status(same ? "Kích thước giữ nguyên." :
+        `${fl.files.length} file sẽ được resize${mixed ? " (mỗi file theo tỉ lệ riêng vì size khác nhau)" : ` về ${t.w}×${t.h}`}. Khung nét đứt = kích thước cũ.`);
+    } catch (e) {
+      if (token === previewToken) pane.status("Không đọc được ảnh: " + e.message, true);
+    }
+  }
+
+  pctRangeEl.addEventListener("input", () => { pctEl.value = pctRangeEl.value; renderPreview(); });
+  pctEl.addEventListener("input", () => {
+    const v = parseFloat(pctEl.value);
+    if (Number.isFinite(v)) pctRangeEl.value = v;
+    renderPreview();
+  });
+  presetsEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => {
+    pctEl.value = b.dataset.pct;
+    pctRangeEl.value = b.dataset.pct;
+    renderPreview();
+  }));
+
   widthEl.addEventListener("input", () => {
     lastDriver = "width";
     const w = parseFloat(widthEl.value);
     if (refW && refH && Number.isFinite(w) && w > 0) {
       heightEl.value = Math.max(1, Math.round(w * (refH / refW)));
     }
+    renderPreview();
   });
   heightEl.addEventListener("input", () => {
     lastDriver = "height";
@@ -549,6 +811,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     if (refW && refH && Number.isFinite(h) && h > 0) {
       widthEl.value = Math.max(1, Math.round(h * (refW / refH)));
     }
+    renderPreview();
   });
 
   function setMode(m) {
@@ -558,7 +821,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     });
     percentFieldsEl.style.display = mode === "percent" ? "" : "none";
     pixelFieldsEl.style.display = mode === "pixel" ? "" : "none";
-    if (mode === "pixel") pendingRefresh = refreshReferenceDims();
+    if (mode === "pixel") pendingRefresh = refreshReferenceDims().then(renderPreview);
+    else renderPreview();
   }
 
   modeToggleEl.querySelectorAll(".mode-btn").forEach((b) => {
@@ -584,6 +848,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
         catch (e) { console.error(p, e); }
       }
       toast(`Đã resize đè ${success} file (${percent}%).`);
+      afterRun();
       return { success };
     }
 
@@ -620,12 +885,20 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
       }
     }
     toast(`Đã resize đè ${success} file theo pixel.`);
+    afterRun();
     return { success };
+  }
+
+  // file da doi kich thuoc: doc lai size, hien anh moi
+  function afterRun() {
+    fl.files.forEach((p) => sizeCache.delete(p));
+    version++;
+    pendingRefresh = refreshReferenceDims().then(renderPreview);
   }
 
   runBtn.addEventListener("click", runResize);
   window.__resizeTest = {
-    fl, run: runResize, pctEl, widthEl, heightEl, setMode,
+    fl, run: runResize, pctEl, widthEl, heightEl, setMode, renderPreview,
     get mode() { return mode; },
     get lastDriver() { return lastDriver; },
     get refW() { return refW; },
