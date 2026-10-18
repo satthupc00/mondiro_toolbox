@@ -1,3 +1,6 @@
+// danh dau dang chay trong Electron (header chua cho cho 3 nut cua so Windows)
+document.documentElement.classList.add("electron");
+
 const fs = require("fs");
 const path = require("path");
 const { blurSymbol, blurSymbolPreview, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");

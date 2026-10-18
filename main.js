@@ -47,6 +47,10 @@ function createWindow() {
     minHeight: MIN_HEIGHT,
     title: "Mondiro Toolbox",
     backgroundColor: "#1F2126",
+    // An thanh tieu de Windows: header Mondiro la thanh tieu de, 3 nut cua so nam de goc phai cung mau header
+    titleBarStyle: "hidden",
+    titleBarOverlay: { color: "#1F2126", symbolColor: "#FFFFFF", height: 58 },
+    autoHideMenuBar: true,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       nodeIntegration: true,
@@ -55,7 +59,6 @@ function createWindow() {
     },
   });
 
-  mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
 
   let saveTimer = null;

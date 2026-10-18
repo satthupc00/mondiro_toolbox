@@ -55,24 +55,40 @@ button:not(:disabled):active { transform: scale(.95); transition-duration: .06s;
 .shell { display: flex; flex-direction: column; height: 100vh; }
 .app { display: flex; flex: 1; min-height: 0; }
 
-/* ===== header chuẩn Mondiro ===== */
+/* ===== header chuẩn Mondiro (m-skill §2) — cũng là thanh tiêu đề cửa sổ (§2.1) ===== */
 .top {
   display: flex; align-items: center; gap: 16px;
-  padding: 10px 14px; border-bottom: 1px solid var(--line); flex: 0 0 auto;
+  height: 58px; padding: 0 14px; border-bottom: 1px solid var(--line); flex: 0 0 auto;
+  -webkit-app-region: drag;
 }
+.electron .top { padding-right: 150px; }               /* chừa chỗ cho 3 nút cửa sổ Windows */
+.top button, .top input, .top select, .top a, .top .no-drag { -webkit-app-region: no-drag; }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-icon { width: 34px; height: 34px; flex: 0 0 auto; }
-.brand-name { font-size: 17px; font-weight: 700; line-height: 1.15; white-space: nowrap; }
+.brand-name { font-size: 17px; font-weight: 700; line-height: 34px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .brand-name .m { color: var(--red); }
 .brand-name .a { color: #fff; }
-.brand-desc { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-.brand-latest {
-  display: inline-block; margin-left: 8px; vertical-align: 2px;
-  font-size: 10px; font-weight: 700; letter-spacing: .04em; line-height: 1;
-  color: var(--ok); background: rgba(63, 184, 132, .12); border: 1px solid rgba(63, 184, 132, .3);
-  padding: 3px 6px; border-radius: 999px;
+.latest {
+  font-size: 10.5px; font-weight: 800; line-height: 1.5; color: #2EB872; background: #2eb87224;
+  padding: 1px 7px; border-radius: 20px; animation: pop .32s var(--ease-spring);
 }
 .tools { display: flex; gap: 8px; margin-left: auto; }
+
+/* nút icon góc phải trên (m-skill §2b) */
+.ibtn {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid transparent; background: transparent;
+  color: var(--muted); display: grid; place-items: center; cursor: pointer;
+}
+.ibtn svg { width: 18px; height: 18px; }
+.ibtn:hover { color: var(--text); border-color: var(--red); transform: translateY(-1px); }
+.upd.checking svg, .upd.downloading svg { animation: spin 1s linear infinite; }
+.upd.ok { color: #3DDC8A; }
+.upd.available { color: #3DDC8A; animation: pulse-green 1.6s ease-in-out infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(61, 220, 138, .45); } 50% { box-shadow: 0 0 0 7px rgba(61, 220, 138, 0); } }
+
+/* dải kéo cửa sổ trên màn khoá / modal phủ toàn cửa sổ */
+.drag-strip { position: absolute; top: 0; left: 0; right: 0; height: 58px; -webkit-app-region: drag; }
 
 /* ===== status bar ===== */
 .status {
@@ -80,16 +96,6 @@ button:not(:disabled):active { transform: scale(.95); transition-duration: .06s;
   padding: 6px 14px; border-top: 1px solid var(--line); flex: 0 0 auto;
 }
 .credit { margin-left: auto; color: var(--faint); font-size: 11px; white-space: nowrap; }
-.update-check-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 4px 10px 4px 8px; border-radius: 6px; border: 1px solid transparent; background: transparent;
-  color: var(--muted); font-size: 12px; cursor: pointer; white-space: nowrap;
-}
-.update-check-btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
-.update-check-btn:hover:not(:disabled) { color: var(--text); border-color: var(--red); transform: translateY(-1px); }
-.update-check-btn:disabled { cursor: default; }
-.update-check-btn:disabled svg { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ===== sidebar ===== */
 .sidebar {
@@ -482,16 +488,6 @@ input[type=checkbox]:checked::after { transform: translateY(-1px) rotate(-45deg)
 .secondary-btn { padding: 8px; margin-top: 8px; background: transparent; border: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
 .secondary-btn:hover { border-color: var(--red); color: var(--text); }
 
-/* ===== nút trạng thái cập nhật (header, bên phải) ===== */
-.top-pill {
-  background: var(--panel); border: 1px solid var(--line); color: var(--text);
-  font-size: 11.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer;
-}
-.top-pill:disabled { cursor: default; color: var(--muted); }
-#update-pill.ready { background: #2E9E5B; border-color: #2E9E5B; color: #fff; animation: pulse-green 1.8s ease-in-out infinite; }
-#update-pill.ready:hover { background: #36B569; animation: none; transform: translateY(-1px); }
-@keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(54, 181, 105, .45); } 50% { box-shadow: 0 0 0 7px rgba(54, 181, 105, 0); } }
-
 /* ===== màn hình nhập key ===== */
 #lock-overlay {
   position: fixed; inset: 0; z-index: 5000;
@@ -506,11 +502,11 @@ input[type=checkbox]:checked::after { transform: translateY(-1px) rotate(-45deg)
   display: flex; flex-direction: column; gap: 10px; user-select: text;
   animation: dialog-in .32s var(--ease-spring) both;
 }
-.lock-brand { font-size: 17px; font-weight: 700; }
+.lock-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+.lock-logo { width: 64px; height: 64px; }
 .lock-brand .brand-red { color: var(--red); }
 .lock-brand .brand-white { color: #fff; }
-.lock-sub { color: var(--muted); font-size: 11.5px; margin-top: -6px; }
-.lock-msg { font-size: 12.5px; line-height: 1.5; margin-top: 6px; }
+.lock-msg { font-size: 12.5px; line-height: 1.5; margin-top: 6px; text-align: center; }
 .lock-msg.error, .admin-msg.error { color: var(--red); }
 .lock-form { display: flex; flex-direction: column; }
 .lock-input {

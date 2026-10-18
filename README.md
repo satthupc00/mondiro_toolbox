@@ -35,8 +35,8 @@ File nằm trong thư mục `dist/`.
 
 Đổi `"version"` trong `package.json` (ví dụ `1.3.0` → `1.3.1`) rồi push lên nhánh `main`.
 GitHub Actions sẽ tự build `MondiroToolbox-<version>-setup.exe` và đăng lên mục **Releases** (khoảng 5–10 phút, xem ở tab **Actions**).
-App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng (hoặc khi bấm nút **Kiểm tra cập nhật**
-ở góc dưới bên trái), tự tải về, rồi hỏi "Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
+App trên máy đồng nghiệp kiểm tra bản mới lúc mở app và mỗi 1 tiếng (hoặc khi bấm icon **mũi tên xoay**
+ở góc phải trên), tự tải về, rồi hỏi "Cập nhật ngay / Để sau". Chọn "Để sau" thì lần tắt app tới sẽ tự cài.
 App không hiện số version, chỉ hiện chữ **latest** màu xanh dưới tên app khi đang dùng bản mới nhất.
 
 > **Lưu ý:**
@@ -59,9 +59,11 @@ Thu hồi hoặc xóa key ở bảng Admin (của Spine Preview hoặc của Too
 
 ## Giao diện & icon
 
-Giao diện theo chuẩn chung của các app Mondiro (m-skill): header có icon + **Mondiro** đỏ + tên app trắng
-và dòng mô tả ("Các tool lặt vặt cho team Anim"), sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
-Màu nhấn đỏ `#E5383B`, font Segoe UI, có hiệu ứng chuyển động nhẹ cho nút/danh sách/thanh trượt.
+Giao diện theo chuẩn chung của các app Mondiro (m-skill): header = thanh tiêu đề cửa sổ (đã ẩn thanh
+tiêu đề trắng của Windows, kéo cửa sổ bằng header, 3 nút thu nhỏ / phóng to / đóng nằm góc phải cùng màu header),
+logo + **Mondiro** đỏ + Toolbox trắng trên 1 hàng, chữ `latest` xanh khi là bản mới nhất; góc phải trên là nút
+**kiểm tra cập nhật** chỉ có icon mũi tên xoay (xoay = đang kiểm tra/tải, xanh lá = đã mới nhất, xanh lá nhấp
+nháy = có bản mới, bấm để cập nhật). Sidebar chọn tool bên trái, footer có "Created by Mondiro".
 
 Icon "M": chữ M trắng nét bo tròn ở giữa, vòng 12 chấm màu quanh, nền xanh navy bo góc. File gốc:
 `build/icon.svg` (bản đầy đủ, 48px trở lên) và `build/icon-small.svg` (bản cho 16–40px và logo header:
