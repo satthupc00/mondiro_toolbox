@@ -23,15 +23,35 @@
   // ---- brand: no version number, only "latest" while this copy is the newest release ----
   const versionEl = document.getElementById('appVersion');
 
-  // "latest" in green under the name while this copy is the newest release on GitHub.
-  const latestTag = el('span', { class: 'brand-latest', text: 'latest', hidden: '' });
-  if (versionEl) versionEl.append(latestTag);
+  // "latest" in green next to the name while this copy is the newest release on GitHub.
+  const latestTag = el('span', { class: 'latest', text: 'latest', hidden: '' });
+  if (versionEl) versionEl.replaceWith(latestTag);
   const refreshLatest = async () => {
     try {
       const latest = await call('check-latest');
-      if (latest !== null) latestTag.hidden = !latest;
+      if (latest !== null) { latestTag.hidden = !latest; setUpd(latest ? 'ok' : null); }
     } catch (e) { /* keep the previous state */ }
   };
+
+  // ---- top-right: update button, icon only (m-skill 2b). States shown by colour/animation + tooltip:
+  // checking / downloading = spinning, available = green pulse (click to restart & install), ok = green.
+  const updBtn = document.getElementById('checkUpdateBtn');
+  let updState = null;
+  const UPD_TITLE = {
+    checking: 'Kiểm tra cập nhật · Đang kiểm tra…',
+    downloading: 'Kiểm tra cập nhật · Đang tải bản mới…',
+    available: 'Có bản mới · bấm để khởi động lại và cập nhật',
+    ok: 'Kiểm tra cập nhật · Đã là bản mới nhất',
+  };
+  function setUpd(state, title) {
+    if (!updBtn) return;
+    if (updState === 'available' && state !== 'available') return; // ban moi da tai xong thi giu trang thai cho bam
+    updState = state;
+    updBtn.classList.remove('checking', 'downloading', 'available', 'ok');
+    if (state) updBtn.classList.add(state);
+    updBtn.title = title || UPD_TITLE[state] || 'Kiểm tra cập nhật';
+    updBtn.setAttribute('aria-label', updBtn.title);
+  }
   refreshLatest();
   setInterval(refreshLatest, 60 * 60 * 1000);
 
@@ -50,12 +70,15 @@
   const keyForm = el('div', { class: 'lock-form', hidden: '' }, [keyInput, activateBtn, retryBtn]);
   const lockOverlay = el('div', { id: 'lock-overlay' }, [
     el('div', { class: 'lock-card' }, [
-      el('div', { class: 'lock-brand' }, [el('span', { class: 'brand-red', text: 'Mondiro' }), el('span', { class: 'brand-white', text: ' Toolbox' })]),
-      el('div', { class: 'lock-sub', text: 'Các tool lặt vặt cho team Anim' }),
+      el('div', { class: 'lock-brand' }, [
+        el('img', { class: 'lock-logo', src: '../build/icon-small.svg', alt: '' }),
+        el('div', {}, [el('span', { class: 'brand-red', text: 'Mondiro' }), el('span', { class: 'brand-white', text: ' Toolbox' })])
+      ]),
       lockMsg,
       keyForm
     ]),
-    el('div', { class: 'lock-credit', text: 'Created by Mondiro' })
+    el('div', { class: 'lock-credit', text: 'Created by Mondiro' }),
+    el('div', { class: 'drag-strip' })
   ]);
   document.body.append(lockOverlay);
 
@@ -87,32 +110,14 @@
   retryBtn.addEventListener('click', check);
   ipcRenderer.on('license-status', (_e, status) => applyStatus(status));
 
-  // ---- top-right: update pill (Admin is reached with Ctrl+Shift+M only) ----
-  const updatePill = el('button', { id: 'update-pill', class: 'top-pill', hidden: '' });
-  (document.getElementById('topTools') || document.body).append(updatePill);
-
+  // ---- update events from the main process (see updater.js) ----
   ipcRenderer.on('update-status', (_e, s) => {
     if (s.state !== 'error') latestTag.hidden = true;
-    if (s.state === 'downloading') {
-      updatePill.hidden = false;
-      updatePill.disabled = true;
-      updatePill.classList.remove('ready');
-      updatePill.textContent = `Đang tải bản mới… ${s.percent || 0}%`;
-    } else if (s.state === 'ready') {
-      updatePill.hidden = false;
-      updatePill.disabled = false;
-      updatePill.classList.add('ready');
-      updatePill.textContent = 'Cập nhật ↻';
-      updatePill.title = 'Khởi động lại app để cài bản mới';
-    } else if (s.state === 'error' && !updatePill.classList.contains('ready')) {
-      updatePill.hidden = true;
-    }
+    if (s.state === 'downloading') setUpd('downloading', `Kiểm tra cập nhật · Đang tải bản mới… ${s.percent || 0}%`);
+    else if (s.state === 'ready') setUpd('available');
+    else if (s.state === 'error' && updState === 'downloading') setUpd(null);
   });
-  updatePill.addEventListener('click', () => ipcRenderer.send('update-install'));
 
-  // ---- bottom-left of the sidebar: "Kiểm tra cập nhật" ----
-  const checkBtn = document.getElementById('checkUpdateBtn');
-  const checkLabel = checkBtn && checkBtn.querySelector('span');
   const CHECK_TEXT = {
     latest: () => 'Bạn đang dùng bản mới nhất.',
     downloading: () => 'Có bản mới, đang tải về... Tải xong app sẽ hỏi khởi động lại.',
@@ -120,15 +125,16 @@
     dev: () => 'Có bản mới (bản chạy thử không tự cập nhật được).',
     offline: () => 'Không kiểm tra được, hãy kiểm tra kết nối mạng.'
   };
-  if (checkBtn) checkBtn.addEventListener('click', async () => {
-    if (checkBtn.disabled) return;
-    checkBtn.disabled = true;
-    checkLabel.textContent = 'Đang kiểm tra...';
+  if (updBtn) updBtn.addEventListener('click', async () => {
+    if (updState === 'available') { ipcRenderer.send('update-install'); return; }
+    if (updState === 'checking' || updState === 'downloading') return;
+    setUpd('checking');
     let res;
     try { res = await call('update-check-now'); } catch (e) { res = { state: 'offline' }; }
-    checkLabel.textContent = 'Kiểm tra cập nhật';
-    checkBtn.disabled = false;
-    if (res.state === 'latest') latestTag.hidden = false;
+    if (res.state === 'latest') { latestTag.hidden = false; setUpd('ok'); }
+    else if (res.state === 'downloading') setUpd('downloading');
+    else if (res.state === 'ready') setUpd('available');
+    else setUpd(null);
     window.toast((CHECK_TEXT[res.state] || CHECK_TEXT.offline)(res.version));
   });
 
@@ -136,6 +142,7 @@
   const adminBody = el('div', { class: 'admin-body' });
   const adminMsg = el('div', { class: 'admin-msg' });
   const adminModal = el('div', { id: 'admin-modal', hidden: '' }, [
+    el('div', { class: 'drag-strip' }),
     el('div', { class: 'admin-card' }, [
       el('div', { class: 'admin-head' }, [
         el('div', { class: 'admin-title', text: 'Quản lý key' }),
