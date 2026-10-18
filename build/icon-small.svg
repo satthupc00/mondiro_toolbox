@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <title>Mondiro Toolbox (small sizes)</title>
-  <g stroke="#1F2126" stroke-width="10" stroke-linejoin="round">
-    <rect x="8" y="8" width="108" height="108" rx="22" fill="#ECE8E0"/>
-    <rect x="128" y="8" width="108" height="108" rx="22" fill="#ECE8E0"/>
-    <rect x="8" y="128" width="108" height="108" rx="22" fill="#ECE8E0"/>
-    <rect x="140" y="140" width="108" height="108" rx="22" fill="#E5383B"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><title>Mondiro Toolbox (small sizes)</title><rect width="512" height="512" rx="88" fill="#0E2244"/><circle cx="256.00" cy="60.00" r="40" fill="#FF8A00"/><circle cx="452.00" cy="256.00" r="40" fill="#34B85C"/><circle cx="256.00" cy="452.00" r="40" fill="#34B85C"/><circle cx="60.00" cy="256.00" r="40" fill="#F2453D"/><path transform="translate(256 256) scale(1.12)" d="M-95 95V-95L0 69.54L95 -95V95" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round" stroke-linejoin="round"/></svg>
