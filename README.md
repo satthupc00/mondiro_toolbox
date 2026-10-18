@@ -63,9 +63,10 @@ Giao diện theo chuẩn chung của các app Mondiro (m-skill): header có icon
 và dòng mô tả ("Các tool lặt vặt cho team Anim"), sidebar chọn tool bên trái, thanh dưới cùng có nút **Kiểm tra cập nhật** và "Created by Mondiro".
 Màu nhấn đỏ `#E5383B`, font Segoe UI, có hiệu ứng chuyển động nhẹ cho nút/danh sách/thanh trượt.
 
-Icon "Sprite Drawer" (lưới 4 ô, 1 ô đỏ đang trượt ra), không có khung nền. File gốc: `build/icon.svg`
-(cỡ lớn) và `build/icon-small.svg` (bản gọn cho 16/24/32px). `build/icon.png` (512px) và `build/icon.ico`
-(16–256px) được xuất từ 2 file này.
+Icon "M": chữ M trắng nét bo tròn ở giữa, vòng 12 chấm màu quanh, nền xanh navy bo góc. File gốc:
+`build/icon.svg` (bản đầy đủ, 48px trở lên) và `build/icon-small.svg` (bản cho 16–40px và logo header:
+chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `build/icon.png` (512px) và `build/icon.ico`
+(16, 20, 24, 32, 40, 48, 64, 128, 256) được xuất từ 2 file này.
 
 ## Các tool bên trong
 
