@@ -33,7 +33,9 @@ function saveWindowState() {
 }
 
 function createWindow() {
-  const iconPath = path.join(__dirname, "build", "icon.png");
+  // Windows: dung file .ico nhieu co de taskbar/thanh tieu de tu chon ban 16-40px (ban toi gian),
+  // thay vi thu nho anh 512px (ban day du nhieu cham nho).
+  const iconPath = path.join(__dirname, "build", process.platform === "win32" ? "icon.ico" : "icon.png");
   const state = loadWindowState();
 
   mainWindow = new BrowserWindow({
