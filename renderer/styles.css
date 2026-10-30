@@ -474,6 +474,12 @@ input[type=checkbox]:checked::after { transform: translateY(-1px) rotate(-45deg)
 .cf-canvas.resize-old { outline: 1px dashed rgba(255, 255, 255, .3); }
 .resize-ghost { position: absolute; border: 1px dashed rgba(255, 255, 255, .35); pointer-events: none; }
 
+/* ===== MP4 -> GIF ===== */
+.gif-media { max-width: calc(100% - 24px); max-height: calc(100% - 24px); display: block; border-radius: 4px; }
+.gif-progress { height: 4px; border-radius: 4px; background: #474C55; margin-top: 10px; overflow: hidden; }
+.gif-progress i { display: block; height: 100%; width: 0; background: var(--red); transition: width var(--t-fast) linear; }
+.ba-toggle .mode-btn:disabled { opacity: .4; cursor: default; transform: none; }
+
 /* ===== nút dùng chung cho màn hình key / bảng Admin ===== */
 .text-btn, .icon-btn {
   background: transparent; border: 1px solid var(--line); color: var(--text);

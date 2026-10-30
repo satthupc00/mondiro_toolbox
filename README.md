@@ -1,6 +1,6 @@
 # Mondiro Toolbox (bản Electron)
 
-Gộp 6 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, FBF Viewer thành 1 app duy nhất,
+Gộp 7 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, FBF Viewer, MP4 → GIF thành 1 app duy nhất,
 giao diện y theo bản mockup đã duyệt (sidebar icon-rail thu gọn/mở rộng, icon thật, bo góc).
 
 Đây là bản viết lại bằng Electron (giao diện đẹp như trình duyệt thật) thay cho bản Python/Tkinter
@@ -99,6 +99,10 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
   vùng vẽ của nó — cho symbol rời); tuỳ chọn chừa lề px và **Giữ tâm ảnh** để pivot Spine/Cocos không lệch
   (Riêng từng ảnh + Giữ tâm = Smart Crop cũ). **Theo kích thước W×H** với điểm neo 3×3 (nhập lớn hơn ảnh thì
   phần dư là nền trong suốt). Có khung xem trước từng frame. Ghi đè file gốc.
+- **MP4 → GIF** — kéo thả video (mp4, m4v, mov, webm), chọn FPS (10/12/15/24/30), chiều rộng
+  (Gốc/720/480/320, chiều cao tự theo tỉ lệ), cắt đoạn bằng giây bắt đầu/kết thúc, bật/tắt lặp vô hạn.
+  Bấm **Xuất GIF**: file `tên_video.gif` lưu cạnh video (trùng tên thì thêm `_1`, `_2`...), xem lại ngay
+  trong app và có nút **Mở thư mục**. Không cần cài ffmpeg.
 
 ## Cấu trúc thư mục
 

@@ -31,6 +31,7 @@ const TOOLS = {
   rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và thay thế chữ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
+  gif: { label: "MP4 → GIF", group: "ANIMATION", desc: "Chuyển video MP4 thành ảnh GIF: chọn FPS, chiều rộng, đoạn cắt. GIF lưu cạnh file video." },
   cropfbf: { label: "Crop FBF", group: "XỬ LÝ ẢNH", desc: "Tự cắt phần trong suốt thừa (chung cả chuỗi hoặc riêng từng ảnh), hoặc crop theo kích thước W×H. Ghi đè file gốc." },
 };
 
@@ -1175,6 +1176,207 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   update();
   window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
+})();
+
+// ============================================================
+// MP4 -> GIF — giai ma video bang Chromium (the <video> an), ve tung khung len canvas,
+// ma hoa GIF bang gifenc (moi khung 1 bang mau rieng 256 mau). Khong can ffmpeg.
+// ============================================================
+(function initGif() {
+  const { GIFEncoder, quantize, applyPalette } = require("gifenc");
+  const { shell } = require("electron");
+  const VIDEO_EXT = [".mp4", ".m4v", ".mov", ".webm"];
+  const dropEl = document.getElementById("gifDrop");
+  const dropEmptyEl = document.getElementById("gifDropEmpty");
+  const pickedEl = document.getElementById("gifPicked");
+  const nameEl = document.getElementById("gifName");
+  const metaEl = document.getElementById("gifMeta");
+  const fpsEl = document.getElementById("gifFps");
+  const widthEl = document.getElementById("gifWidth");
+  const startEl = document.getElementById("gifStart");
+  const endEl = document.getElementById("gifEnd");
+  const loopEl = document.getElementById("gifLoop");
+  const runBtn = document.getElementById("gifRunBtn");
+  const openBtn = document.getElementById("gifOpenBtn");
+  const clearBtn = document.getElementById("gifClearBtn");
+  const viewEl = document.getElementById("gifView");
+  const videoEl = document.getElementById("gifVideo");
+  const imgEl = document.getElementById("gifImg");
+  const emptyEl = document.getElementById("gifEmpty");
+  const sizeInfoEl = document.getElementById("gifSizeInfo");
+  const progressEl = document.getElementById("gifProgress");
+  const barEl = document.getElementById("gifBar");
+  const statusEl = document.getElementById("gifStatus");
+
+  let src = null;      // { path, width, height, duration }
+  let outPath = null;  // GIF vua xuat
+  let busy = false;
+  let cancel = false;
+  let view = "video";
+
+  const status = (t, warn) => { statusEl.textContent = t || ""; statusEl.classList.toggle("warn", !!warn); };
+  const fmtSize = (b) => (b >= 1048576 ? (b / 1048576).toFixed(2) + " MB" : Math.round(b / 1024) + " KB");
+
+  function settings() {
+    const fps = Math.min(50, Math.max(1, parseFloat(fpsEl.value) || 15));
+    let w = parseInt(widthEl.value, 10);
+    if (!(w > 0) || !src) w = src ? src.width : 480;
+    w = Math.min(w, src ? src.width : w);
+    const h = src ? Math.max(1, Math.round(src.height * (w / src.width))) : 0;
+    const dur = src ? src.duration : 0;
+    const start = Math.min(Math.max(0, parseFloat(startEl.value) || 0), Math.max(0, dur - 0.01));
+    let end = parseFloat(endEl.value);
+    if (!(end > start) || end > dur) end = dur;
+    const frames = Math.max(1, Math.floor((end - start) * fps + 1e-6));
+    return { fps, w, h, start, end, frames };
+  }
+
+  function refreshInfo() {
+    if (!src) { sizeInfoEl.textContent = ""; return; }
+    const s = settings();
+    sizeInfoEl.innerHTML = `${src.width}×${src.height} → <b>${s.w}×${s.h}</b>`;
+    if (!busy) status(`${s.frames} khung · ${(s.end - s.start).toFixed(2)} giây · ${s.fps} fps${s.frames > 600 ? " — GIF dài, file sẽ khá nặng" : ""}`, s.frames > 600);
+  }
+
+  function setView(v) {
+    view = v;
+    viewEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === v));
+    videoEl.hidden = !src || v !== "video";
+    imgEl.hidden = !outPath || v !== "gif";
+    emptyEl.hidden = !!src;
+    if (v === "gif") videoEl.pause();
+  }
+  viewEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => { if (!b.disabled) setView(b.dataset.view); }));
+
+  function chips(groupEl, attr, inputEl) {
+    const sync = () => groupEl.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", String(b.dataset[attr]) === String(parseInt(inputEl.value, 10) || 0) || (b.dataset[attr] === "0" && src && parseInt(inputEl.value, 10) === src.width)));
+    groupEl.querySelectorAll(".mode-btn").forEach((b) => b.addEventListener("click", () => {
+      inputEl.value = b.dataset[attr] === "0" && src ? src.width : b.dataset[attr];
+      sync(); refreshInfo();
+    }));
+    inputEl.addEventListener("input", () => { sync(); refreshInfo(); });
+    return sync;
+  }
+  const syncFps = chips(document.getElementById("gifFpsChips"), "fps", fpsEl);
+  const syncW = chips(document.getElementById("gifWidthChips"), "w", widthEl);
+  [startEl, endEl].forEach((el) => el.addEventListener("input", refreshInfo));
+
+  function loadVideo(url) {
+    return new Promise((resolve, reject) => {
+      const v = document.createElement("video");
+      v.muted = true; v.preload = "auto"; v.src = url;
+      v.onloadeddata = () => resolve(v);
+      v.onerror = () => reject(new Error("Không đọc được video (định dạng/codec không hỗ trợ)."));
+    });
+  }
+
+  async function setSource(p) {
+    if (busy) return;
+    outPath = null;
+    openBtn.hidden = true;
+    viewEl.querySelector('[data-view="gif"]').disabled = true;
+    if (!p) {
+      src = null;
+      videoEl.removeAttribute("src"); videoEl.load();
+      dropEmptyEl.hidden = false; pickedEl.hidden = true;
+      setView("video"); refreshInfo(); status("");
+      return;
+    }
+    status("Đang đọc video...");
+    try {
+      const v = await loadVideo(require("url").pathToFileURL(p).href);
+      src = { path: p, width: v.videoWidth, height: v.videoHeight, duration: v.duration };
+      v.removeAttribute("src"); v.load();
+    } catch (e) { status(e.message, true); return; }
+    nameEl.textContent = path.basename(p);
+    metaEl.textContent = `${src.width}×${src.height} · ${src.duration.toFixed(2)} giây · ${path.dirname(p)}`;
+    dropEmptyEl.hidden = true; pickedEl.hidden = false;
+    if (parseInt(widthEl.value, 10) > src.width) widthEl.value = src.width;
+    endEl.value = "";
+    videoEl.src = require("url").pathToFileURL(p).href;
+    syncFps(); syncW();
+    setView("video"); refreshInfo();
+  }
+
+  setupDropzoneVisuals(dropEl);
+  dropEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = Array.from(e.dataTransfer.files || [])[0];
+    const p = f && getFilePath(f);
+    if (!p || !VIDEO_EXT.includes(path.extname(p).toLowerCase())) { toast("Chỉ nhận video MP4 (hoặc MOV/WEBM)."); return; }
+    setSource(p);
+  });
+  clearBtn.addEventListener("click", () => { if (busy) { cancel = true; return; } setSource(null); });
+  openBtn.addEventListener("click", () => outPath && shell.showItemInFolder(outPath));
+
+  function uniqueOut(p) {
+    const base = path.join(path.dirname(p), path.basename(p, path.extname(p)));
+    let out = base + ".gif", i = 1;
+    while (fs.existsSync(out)) out = `${base}_${i++}.gif`;
+    return out;
+  }
+
+  const seek = (v, t) => new Promise((res) => {
+    v.addEventListener("seeked", res, { once: true });
+    v.currentTime = t;
+  });
+
+  async function runGif() {
+    if (busy) return null;
+    if (!src) { toast("Hãy kéo thả 1 video MP4 trước."); return null; }
+    const s = settings();
+    busy = true; cancel = false;
+    runBtn.disabled = true;
+    clearBtn.textContent = "Dừng";
+    progressEl.hidden = false; barEl.style.width = "0%";
+    videoEl.pause();
+    let v;
+    try {
+      v = await loadVideo(require("url").pathToFileURL(src.path).href);
+      const canvas = document.createElement("canvas");
+      canvas.width = s.w; canvas.height = s.h;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const gif = GIFEncoder();
+      const delay = Math.round(1000 / s.fps);
+      for (let i = 0; i < s.frames; i++) {
+        if (cancel) throw new Error("Đã dừng.");
+        await seek(v, Math.min(s.start + i / s.fps, src.duration - 0.001));
+        ctx.drawImage(v, 0, 0, s.w, s.h);
+        const data = ctx.getImageData(0, 0, s.w, s.h).data;
+        const palette = quantize(data, 256);
+        gif.writeFrame(applyPalette(data, palette), s.w, s.h, { palette, delay, repeat: loopEl.checked ? 0 : -1 });
+        barEl.style.width = ((i + 1) / s.frames * 100).toFixed(1) + "%";
+        status(`Đang xử lý khung ${i + 1}/${s.frames}...`);
+        if (i % 4 === 3) await new Promise((r) => setTimeout(r, 0)); // de giao dien kip ve lai
+      }
+      gif.finish();
+      const out = uniqueOut(src.path);
+      fs.writeFileSync(out, gif.bytes());
+      outPath = out;
+      const size = fs.statSync(out).size;
+      imgEl.src = require("url").pathToFileURL(out).href + "?v=" + Date.now();
+      viewEl.querySelector('[data-view="gif"]').disabled = false;
+      openBtn.hidden = false;
+      setView("gif");
+      status(`Đã lưu ${path.basename(out)} · ${s.w}×${s.h} · ${s.frames} khung · ${fmtSize(size)}`);
+      toast(`Đã xuất GIF (${fmtSize(size)}).`);
+      return { out, size, frames: s.frames, w: s.w, h: s.h };
+    } catch (e) {
+      status(e.message, true);
+      if (e.message !== "Đã dừng.") toast("Lỗi: " + e.message);
+      return null;
+    } finally {
+      if (v) { v.removeAttribute("src"); v.load(); }
+      busy = false;
+      runBtn.disabled = false;
+      clearBtn.textContent = "Bỏ chọn";
+      progressEl.hidden = true;
+    }
+  }
+  runBtn.addEventListener("click", runGif);
+
+  setView("video");
+  window.__gifTest = { setSource, run: runGif, fpsEl, widthEl, startEl, endEl, settings };
 })();
 
 // ============================================================

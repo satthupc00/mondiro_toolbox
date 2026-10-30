@@ -61,6 +61,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h4M2 15h4M18 3v4M18 17v4M18 9h4M18 15h4"/></svg>
         <span>FBF Viewer</span>
       </div>
+      <div class="nav-item" data-tab="gif" title="MP4 → GIF">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="m16 10 6-3v10l-6-3"/><path d="M6 12h4"/></svg>
+        <span>MP4 → GIF</span>
+      </div>
     </div>
 
     <div class="sidebar-spacer"></div>
@@ -314,6 +318,83 @@
           </div>
           <div class="fv-meta" id="fvMeta"></div>
           <p class="fv-hint"><kbd>↑</kbd><kbd>↓</kbd> chuyển chuỗi · <kbd>Space</kbd> Play/Stop · <kbd>P</kbd> Ping-pong · <kbd>R</kbd> Tua ngược · <kbd>Delete</kbd> bỏ chuỗi đang xem · nút x1–x4 góc phải để chỉnh tốc độ</p>
+        </div>
+      </section>
+
+      <!-- MP4 -> GIF -->
+      <section class="tab-panel tool-2col" data-panel="gif" hidden>
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="dropzone cf-drop atlas-drop" id="gifDrop">
+              <div class="dz-empty" id="gifDropEmpty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo thả video MP4 vào đây</span>
+              </div>
+              <div class="atlas-picked" id="gifPicked" hidden>
+                <span class="field-label" style="margin:0 0 4px;">Video</span>
+                <div class="atlas-picked-name" id="gifName"></div>
+                <div class="atlas-picked-dir" id="gifMeta"></div>
+              </div>
+            </div>
+            <div class="panel-card cf-options" style="margin-top:12px;">
+              <span class="field-label">FPS</span>
+              <div class="slider-row">
+                <div class="chip-row" id="gifFpsChips" style="margin:0;">
+                  <button class="mode-btn" type="button" data-fps="10">10</button>
+                  <button class="mode-btn" type="button" data-fps="12">12</button>
+                  <button class="mode-btn active" type="button" data-fps="15">15</button>
+                  <button class="mode-btn" type="button" data-fps="24">24</button>
+                  <button class="mode-btn" type="button" data-fps="30">30</button>
+                </div>
+                <input class="input input-short" id="gifFps" value="15" title="FPS của GIF">
+              </div>
+              <span class="field-label" style="margin-top:12px;">Chiều rộng (px)</span>
+              <div class="slider-row">
+                <div class="chip-row" id="gifWidthChips" style="margin:0;">
+                  <button class="mode-btn" type="button" data-w="0">Gốc</button>
+                  <button class="mode-btn" type="button" data-w="720">720</button>
+                  <button class="mode-btn active" type="button" data-w="480">480</button>
+                  <button class="mode-btn" type="button" data-w="320">320</button>
+                </div>
+                <input class="input input-short" id="gifWidth" value="480" title="Chiều rộng GIF, chiều cao tự tính theo tỉ lệ">
+              </div>
+              <div class="field-row" style="gap:12px; margin-top:12px; align-items:flex-end;">
+                <div>
+                  <span class="field-label">Bắt đầu (giây)</span>
+                  <input class="input input-short" id="gifStart" value="0">
+                </div>
+                <div>
+                  <span class="field-label">Kết thúc (giây)</span>
+                  <input class="input input-short" id="gifEnd" placeholder="hết">
+                </div>
+                <label class="check" style="margin-bottom:9px;" title="GIF tự chạy lại từ đầu khi hết">
+                  <input type="checkbox" id="gifLoop" checked> Lặp vô hạn
+                </label>
+              </div>
+            </div>
+            <div class="tool-actions">
+              <button class="btn btn-primary" id="gifRunBtn">Xuất GIF</button>
+              <button class="btn btn-ghost" id="gifOpenBtn" hidden title="Mở thư mục chứa file GIF">Mở thư mục</button>
+              <button class="btn btn-ghost" id="gifClearBtn">Bỏ chọn</button>
+            </div>
+          </div>
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <div class="mode-toggle ba-toggle" id="gifView">
+                <button class="mode-btn active" data-view="video" type="button" title="Video gốc">Video</button>
+                <button class="mode-btn" data-view="gif" type="button" title="GIF vừa xuất" disabled>GIF</button>
+              </div>
+              <span class="cf-size" id="gifSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="gifStage">
+              <video id="gifVideo" class="gif-media" controls loop muted playsinline hidden></video>
+              <img id="gifImg" class="gif-media" alt="" hidden>
+              <div class="cf-empty" id="gifEmpty">Chưa có video</div>
+            </div>
+            <div class="gif-progress" id="gifProgress" hidden><i id="gifBar"></i></div>
+            <div class="cf-status" id="gifStatus"></div>
+          </div>
         </div>
       </section>
 
