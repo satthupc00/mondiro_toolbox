@@ -9,6 +9,7 @@ Chủ repo (Mondiro) là artist, không phải lập trình viên. Trả lời b
   Sửa lỗi nhỏ: tăng số cuối (1.3.0 → 1.3.1). Thêm tính năng: tăng số giữa (1.3.1 → 1.4.0).
 - **Không có ghi chú phát hành**: app không hiện số version, không hiện release notes hay bảng chào mừng.
   Chỉ hiện chữ `latest` màu xanh dưới tên app khi đang dùng bản mới nhất.
+  App này **không có nút What's new** và không có `whatsnew.json` (Mondiro đã chốt, ngoại lệ so với m-skill §6.1).
 
 ## Key
 
