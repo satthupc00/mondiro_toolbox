@@ -478,10 +478,7 @@ input[type=checkbox]:checked::after { transform: translateY(-1px) rotate(-45deg)
 .cv-target { font: 600 20px var(--mono); color: #fff; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .cv-source { font-size: 11.5px; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cv-canvas { position: relative; outline: 2px dashed var(--red); outline-offset: 0; }
-.cv-canvas img {
-  position: absolute; image-rendering: pixelated; outline: 1px dashed rgba(255, 255, 255, .35);
-  transition: left var(--t-med) var(--ease-out), top var(--t-med) var(--ease-out);
-}
+.cv-canvas img { position: absolute; image-rendering: pixelated; outline: 1px dashed rgba(255, 255, 255, .35); }
 
 /* ===== MP4 -> GIF ===== */
 .gif-media { max-width: calc(100% - 24px); max-height: calc(100% - 24px); display: block; border-radius: 4px; }
