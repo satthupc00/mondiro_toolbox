@@ -53,6 +53,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
         <span>Resize</span>
       </div>
+      <div class="nav-item" data-tab="canvas" title="Resize Canvas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2.5"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+        <span>Resize Canvas</span>
+      </div>
     </div>
 
     <div class="nav-group-label" style="margin-top:14px;">Animation</div>
@@ -394,6 +398,60 @@
             </div>
             <div class="gif-progress" id="gifProgress" hidden><i id="gifBar"></i></div>
             <div class="cf-status" id="gifStatus"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESIZE CANVAS -->
+      <section class="tab-panel tool-2col" data-panel="canvas" hidden>
+        <div class="cf-layout">
+          <div class="cf-left">
+            <div class="panel-card cf-options">
+              <div class="field-row" style="gap:16px; align-items:flex-start;">
+                <div style="flex:1; min-width:0;">
+                  <span class="field-label">Canvas chung</span>
+                  <div class="cv-target" id="cvTarget">—</div>
+                  <div class="cv-source" id="cvSource">Lấy theo ảnh to nhất trong danh sách</div>
+                </div>
+                <div>
+                  <span class="field-label">Neo</span>
+                  <div class="anchor-grid" id="cvAnchor">
+                    <button type="button" data-ax="0" data-ay="0" title="Trên trái"></button><button type="button" data-ax=".5" data-ay="0" title="Trên giữa"></button><button type="button" data-ax="1" data-ay="0" title="Trên phải"></button>
+                    <button type="button" data-ax="0" data-ay=".5" title="Giữa trái"></button><button type="button" data-ax=".5" data-ay=".5" class="active" title="Chính giữa"></button><button type="button" data-ax="1" data-ay=".5" title="Giữa phải"></button>
+                    <button type="button" data-ax="0" data-ay="1" title="Dưới trái"></button><button type="button" data-ax=".5" data-ay="1" title="Dưới giữa"></button><button type="button" data-ax="1" data-ay="1" title="Dưới phải"></button>
+                  </div>
+                </div>
+              </div>
+              <p class="field-hint" style="margin:10px 0 0;">Mọi ảnh được nới canvas bằng ảnh to nhất, phần thêm vào là nền trong suốt, hình không bị scale. Neo giữa để pivot Spine/Cocos không lệch.</p>
+            </div>
+            <div class="dropzone cf-drop" id="cvDrop">
+              <div class="dz-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v12M12 3l-4 4M12 3l4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                <span>Kéo thả ảnh PNG hoặc folder vào đây</span>
+              </div>
+              <div class="filelist dz-list" id="cvList" hidden></div>
+            </div>
+            <div class="tool-actions">
+              <button class="btn btn-primary" id="cvRunBtn">Áp canvas</button>
+              <button class="btn btn-ghost" id="cvClearBtn">Xóa hết</button>
+            </div>
+          </div>
+          <div class="cf-right">
+            <div class="cf-preview-head">
+              <span class="field-label" style="margin:0;">Xem trước</span>
+              <span class="cf-size" id="cvSizeInfo"></span>
+            </div>
+            <div class="cf-stage" id="cvStage">
+              <div class="cv-canvas" id="cvCanvas" hidden>
+                <img id="cvImg" alt="">
+              </div>
+              <div class="cf-empty" id="cvEmpty">Chưa có hình</div>
+            </div>
+            <div class="cf-frame-row" id="cvFrameRow" hidden>
+              <input type="range" id="cvFrame" min="0" max="0" value="0">
+              <span class="cf-frame-label" id="cvFrameLabel"></span>
+            </div>
+            <div class="cf-status" id="cvStatus"></div>
           </div>
         </div>
       </section>
