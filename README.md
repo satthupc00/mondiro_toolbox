@@ -73,8 +73,8 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
 ## Các tool bên trong
 
 - **Merge Atlas** — kéo 1 file PNG muốn giữ lại; app hiện trước danh sách **sẽ thực hiện** (PNG giữ,
-  các PNG thừa sẽ xoá, dòng nào trong `.atlas` sẽ đổi tên) và xem trước ảnh. Mặc định PNG thừa được
-  **đưa vào Thùng rác** (khôi phục được), bỏ tick để xoá hẳn. Atlas nhiều trang sẽ được cảnh báo.
+  các PNG thừa sẽ xoá, dòng nào trong `.atlas` sẽ đổi tên) và xem trước ảnh. Bấm Merge là PNG thừa
+  **bị xoá hẳn** (không vào Thùng rác). Atlas nhiều trang sẽ được cảnh báo.
 - **Blur Symbols** — batch motion blur (theo chiều dọc) + chỉnh Lightness cho PNG symbol, không cần
   Photoshop. Thanh trượt + ô số cho từng thông số, **xem trước trực tiếp** kết quả (nút Trước/Sau,
   click tên file để xem file khác). Thuật toán port 1:1 từ bản Python (premultiplied alpha để không

@@ -151,7 +151,6 @@ async function cachedSize(p) {
 // MERGE ATLAS
 // ============================================================
 (function initAtlas() {
-  const { shell } = require("electron");
   const dropEl = document.getElementById("atlasDrop");
   const dropEmptyEl = document.getElementById("atlasDropEmpty");
   const pickedEl = document.getElementById("atlasPicked");
@@ -159,7 +158,6 @@ async function cachedSize(p) {
   const pickedDirEl = document.getElementById("atlasPickedDir");
   const planEl = document.getElementById("atlasPlan");
   const planListEl = document.getElementById("atlasPlanList");
-  const trashEl = document.getElementById("atlasTrash");
   const mergeBtn = document.getElementById("atlasMergeBtn");
   const clearBtn = document.getElementById("atlasClearBtn");
   const pane = makePreviewPane("atlas");
@@ -246,10 +244,7 @@ async function cachedSize(p) {
       const p = plan();
       for (const f of p.toDelete) {
         const fp = path.join(p.folder, f);
-        try {
-          if (trashEl.checked) await shell.trashItem(fp);
-          else fs.unlinkSync(fp);
-        } catch (e) { console.error(fp, e); }
+        try { fs.unlinkSync(fp); } catch (e) { console.error(fp, e); }
       }
       for (const a of p.atlases) {
         if (!a.first) continue;
@@ -258,7 +253,7 @@ async function cachedSize(p) {
           fs.writeFileSync(path.join(p.folder, a.name), a.lines.join("\n"));
         } catch (e) { console.error(a.name, e); }
       }
-      toast(trashEl.checked ? "Đã merge xong (PNG thừa nằm trong Thùng rác)." : "Đã merge xong");
+      toast("Đã merge xong");
       version++;
       refresh();
       return true;
@@ -273,7 +268,6 @@ async function cachedSize(p) {
   window.__atlasTest = {
     setSelectedFile: (p) => setSelected(p),
     run: runMerge,
-    trashEl,
   };
 })();
 
