@@ -427,7 +427,7 @@ kbd {
 .cf-stage.cf-pan.zooming { cursor: ns-resize; }
 .cf-stage.cf-pan .cf-canvas { position: absolute; }
 .cf-stage.cf-pan .cf-rect { transition: none; }
-.cf-stage.cf-pan img { -webkit-user-drag: none; pointer-events: none; }
+.cf-stage.cf-pan img { -webkit-user-drag: none; pointer-events: none; image-rendering: auto; }
 .cf-frame-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .cf-frame-row input[type=range] { flex: 1; }
 .cf-frame-label { font: 11.5px var(--mono); color: var(--muted); white-space: nowrap; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }

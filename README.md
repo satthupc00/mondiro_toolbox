@@ -100,8 +100,9 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
   **Auto Crop**: tìm vùng có pixel được vẽ rồi cắt bỏ phần trong suốt thừa, với khung crop **Chung cả chuỗi**
   (mọi frame ra cùng kích thước, không lệch vị trí — cho chuỗi FBF) hoặc **Riêng từng ảnh** (mỗi ảnh theo
   vùng vẽ của nó — cho symbol rời); tuỳ chọn chừa lề px và **Giữ tâm ảnh** để pivot Spine/Cocos không lệch
-  (Riêng từng ảnh + Giữ tâm = Smart Crop cũ). **Theo kích thước W×H**: khung crop đứng yên giữa khung xem trước, kéo chuột trái để di ảnh vào vị trí
-  muốn crop, giữ chuột phải kéo lên/xuống để zoom, double-click để về giữa (khung vượt ra ngoài ảnh thì
+  (Riêng từng ảnh + Giữ tâm = Smart Crop cũ). **Theo kích thước W×H**: W×H mặc định là kích thước gốc của ảnh (chỉ nhập khi muốn đổi). Khung crop
+  đứng yên giữa khung xem trước, kéo chuột trái để di hình vào vị trí muốn crop, giữ chuột phải kéo lên/xuống
+  (hoặc ô Scale %) để scale hình to/nhỏ, double-click để về giữa và 100% (khung vượt ra ngoài hình thì
   phần dư là nền trong suốt). Có khung xem trước từng frame. Ghi đè file gốc.
 - **MP4 → GIF** — kéo thả video (mp4, m4v, mov, webm), chọn FPS (10/12/15/24/30), chiều rộng
   (Gốc/720/480/320, chiều cao tự theo tỉ lệ), cắt đoạn bằng giây bắt đầu/kết thúc, bật/tắt lặp vô hạn.
