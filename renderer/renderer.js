@@ -3,7 +3,7 @@ document.documentElement.classList.add("electron");
 
 const fs = require("fs");
 const path = require("path");
-const { blurSymbol, blurSymbolPreview, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect } = require("../lib/imaging.js");
+const { blurSymbol, blurSymbolPreview, resizeImagePercent, resizeImagePixel, getImageSize, getAlphaBounds, cropToRect, transformCrop } = require("../lib/imaging.js");
 
 let webUtils = null;
 try { webUtils = require("electron").webUtils; } catch (e) { /* fallback file.path */ }
@@ -1127,6 +1127,10 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const widthEl = document.getElementById("cfWidth");
   const heightEl = document.getElementById("cfHeight");
   const scaleEl = document.getElementById("cfScale");
+  const rotRangeEl = document.getElementById("cfRotateRange");
+  const rotEl = document.getElementById("cfRotate");
+  const rotFitEl = document.getElementById("cfRotateFit");
+  const helpEl = document.getElementById("cfHelp");
   const runBtn = document.getElementById("cfRunBtn");
   const clearBtn = document.getElementById("cfClearBtn");
   const canvasEl = document.getElementById("cfCanvas");
@@ -1143,7 +1147,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   // W×H: tam khung crop lech khoi tam anh bao nhieu px anh goc (keo chuot trai),
   // va scale hinh truoc khi cat (giu chuot phai keo len/xuong, hoac o Scale %)
   const pan = { dx: 0, dy: 0 };
-  const zoom = { s: 1 };
+  const zoom = { s: 1, angle: 0 }; // angle: do, chieu kim dong ho
   let curScale = 1; // ti le hien thi hien tai (px man hinh / px anh da scale)
   let scope = "shared"; // Auto Crop: "shared" (chung 1 khung cho ca chuoi) | "each" (rieng tung anh)
   const bounds = new Map(); // filePath -> { width, height, bbox }
@@ -1257,15 +1261,22 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     }
     const w = parseInt(widthEl.value, 10), h = parseInt(heightEl.value, 10);
     if (!(w > 0) || !(h > 0)) return { error: "Nhập Rộng và Cao (px) hợp lệ." };
+    // bat "Canvas tu noi theo goc xoay": khung ra = hop bao cua khung W×H da xoay
+    let W = w, H = h;
+    if (zoom.angle && rotFitEl.checked) {
+      const r = (zoom.angle * Math.PI) / 180, c = Math.abs(Math.cos(r)), sn = Math.abs(Math.sin(r));
+      W = Math.ceil(w * c + h * sn - 1e-6);
+      H = Math.ceil(w * sn + h * c - 1e-6);
+    }
     return {
       mixed,
-      frames: list.map((it) => ({
-        p: it.p, width: it.b.width, height: it.b.height, scale: zoom.s,
-        rect: {
-          x: Math.round((it.b.width / 2 + pan.dx) * zoom.s - w / 2),
-          y: Math.round((it.b.height / 2 + pan.dy) * zoom.s - h / 2), w, h,
-        },
-      })),
+      frames: list.map((it) => {
+        const cx = it.b.width / 2 + pan.dx, cy = it.b.height / 2 + pan.dy; // diem anh goc nam o tam khung
+        return {
+          p: it.p, width: it.b.width, height: it.b.height, scale: zoom.s, angle: zoom.angle, cx, cy,
+          rect: { x: Math.round(cx * zoom.s - W / 2), y: Math.round(cy * zoom.s - H / 2), w: W, h: H },
+        };
+      }),
     };
   }
 
@@ -1281,6 +1292,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   function update() {
     syncDefaultSize();
     const has = fl.files.length > 0;
+    helpEl.hidden = !(has && mode === "size");
     canvasEl.hidden = !has;
     emptyStageEl.hidden = has;
     frameEl.parentElement.hidden = !has;
@@ -1315,8 +1327,13 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
       scale = Math.min(sw / Math.max(b.width, f.rect.w), sh / Math.max(b.height, f.rect.h), 4);
       canvasEl.style.width = b.width * zoom.s * scale + "px";
       canvasEl.style.height = b.height * zoom.s * scale + "px";
-      canvasEl.style.left = stageEl.clientWidth / 2 - (f.rect.x + f.rect.w / 2) * scale + "px";
-      canvasEl.style.top = stageEl.clientHeight / 2 - (f.rect.y + f.rect.h / 2) * scale + "px";
+      canvasEl.style.left = stageEl.clientWidth / 2 - f.cx * zoom.s * scale + "px";
+      canvasEl.style.top = stageEl.clientHeight / 2 - f.cy * zoom.s * scale + "px";
+      // xoay hinh quanh tam khung, khung crop van thang
+      imgEl.style.transformOrigin = `${f.cx * zoom.s * scale}px ${f.cy * zoom.s * scale}px`;
+      imgEl.style.transform = zoom.angle ? `rotate(${zoom.angle}deg)` : "";
+    } else {
+      imgEl.style.transform = "";
     }
     curScale = scale;
     rectEl.hidden = false;
@@ -1324,13 +1341,13 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     rectEl.style.top = f.rect.y * scale + "px";
     rectEl.style.width = f.rect.w * scale + "px";
     rectEl.style.height = f.rect.h * scale + "px";
-    sizeInfoEl.innerHTML = `${b.width}×${b.height}${f.scale && f.scale !== 1 ? ` · scale ${Math.round(f.scale * 100)}%` : ""} → <b>${f.rect.w}×${f.rect.h}</b>`;
-    const same = res.frames.every((it) => (it.scale || 1) === 1 && it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height);
+    sizeInfoEl.innerHTML = `${b.width}×${b.height}${f.scale && f.scale !== 1 ? ` · scale ${Math.round(f.scale * 100)}%` : ""}${f.angle ? ` · xoay ${f.angle}°` : ""} → <b>${f.rect.w}×${f.rect.h}</b>`;
+    const same = res.frames.every((it) => (it.scale || 1) === 1 && !it.angle && it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height);
     if (res.each) {
       const n = res.frames.filter((it) => !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height)).length;
       setStatus(n ? `${n}/${res.frames.length} ảnh sẽ được crop, mỗi ảnh theo vùng vẽ của riêng nó (kích thước khác nhau).` : "Các ảnh đã vừa khít, không còn phần thừa để crop.");
     } else if (res.mixed) setStatus("Các frame trong chuỗi không cùng kích thước — vẫn crop được nhưng nên kiểm tra lại.", true);
-    else if (same && mode === "size") setStatus("Đang giữ nguyên kích thước gốc. Kéo/scale hình, hoặc nhập W×H mới nếu muốn đổi.");
+    else if (same && mode === "size") setStatus("Đang giữ nguyên kích thước gốc.");
     else if (same) setStatus("Chuỗi đã vừa khít, không còn phần thừa để crop.");
     else setStatus(`${res.frames.length} frame sẽ ra cùng kích thước ${f.rect.w}×${f.rect.h}.`);
   }
@@ -1369,9 +1386,11 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   stageEl.addEventListener("pointermove", (e) => {
     if (!drag) return;
     if (drag.button === 0) {
-      // doi px man hinh -> px anh goc
-      pan.dx = Math.round((drag.dx - (e.clientX - drag.x) / (drag.scale * drag.s)) * 2) / 2;
-      pan.dy = Math.round((drag.dy - (e.clientY - drag.y) / (drag.scale * drag.s)) * 2) / 2;
+      // doi px man hinh -> px anh goc (xoay nguoc theo goc hien tai)
+      const mx = (e.clientX - drag.x) / (drag.scale * drag.s), my = (e.clientY - drag.y) / (drag.scale * drag.s);
+      const r = (zoom.angle * Math.PI) / 180, c = Math.cos(r), sn = Math.sin(r);
+      pan.dx = Math.round((drag.dx - (mx * c + my * sn)) * 2) / 2;
+      pan.dy = Math.round((drag.dy - (-mx * sn + my * c)) * 2) / 2;
     } else {
       setScale(drag.s * Math.exp((drag.y - e.clientY) / 200));
       return;
@@ -1397,6 +1416,23 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     if (v > 0) { zoom.s = Math.min(8, Math.max(0.1, v / 100)); update(); }
   });
   scaleEl.addEventListener("change", () => setScale(zoom.s));
+  // xoay hinh: -180..180 do (thanh truot + o so), double-click thanh truot ve 0
+  function setAngle(a) {
+    a = Math.round((((parseFloat(a) || 0) + 540) % 360 - 180) * 10) / 10;
+    if (a === -180) a = 180;
+    zoom.angle = a;
+    rotRangeEl.value = a;
+    rotEl.value = a;
+    update();
+  }
+  rotRangeEl.addEventListener("input", () => setAngle(rotRangeEl.value));
+  rotRangeEl.addEventListener("dblclick", () => setAngle(0));
+  rotEl.addEventListener("input", () => {
+    const v = parseFloat(rotEl.value);
+    if (!isNaN(v)) { zoom.angle = Math.max(-180, Math.min(180, v)); rotRangeEl.value = zoom.angle; update(); }
+  });
+  rotEl.addEventListener("change", () => setAngle(rotEl.value));
+  rotFitEl.addEventListener("change", update);
   [widthEl, heightEl].forEach((el) => el.addEventListener("input", () => { sizeTyped = true; }));
   [paddingEl, widthEl, heightEl].forEach((el) => el.addEventListener("input", update));
   keepCenterEl.addEventListener("change", update);
@@ -1409,7 +1445,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     await scan();
     const res = plan();
     if (res.error !== undefined) { toast(res.error || "Chưa quét xong chuỗi hình."); return { success: 0, failed: [] }; }
-    const todo = res.frames.filter((it) => (it.scale || 1) !== 1 || !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height));
+    const todo = res.frames.filter((it) => (it.scale || 1) !== 1 || it.angle || !(it.rect.x === 0 && it.rect.y === 0 && it.rect.w === it.width && it.rect.h === it.height));
     if (!todo.length) { toast("Không có gì để crop."); return { success: 0, failed: [] }; }
     busy = true;
     runBtn.disabled = true;
@@ -1417,14 +1453,19 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const failed = [];
     for (let i = 0; i < todo.length; i++) {
       setStatus(`Đang crop ${i + 1}/${todo.length}...`);
-      try { await cropToRect(todo[i].p, todo[i].rect, todo[i].scale || 1); success++; }
+      const t = todo[i];
+      try {
+        if (mode === "size") await transformCrop(t.p, { scale: t.scale, angle: t.angle, cx: t.cx, cy: t.cy, w: t.rect.w, h: t.rect.h });
+        else await cropToRect(t.p, t.rect);
+        success++;
+      }
       catch (e) { failed.push(`${path.basename(todo[i].p)}: ${e.message}`); }
       bounds.delete(todo[i].p);
     }
     busy = false;
     runBtn.disabled = false;
     cacheBust++; // anh da doi, nap lai
-    if (mode === "size") { pan.dx = pan.dy = 0; setScale(1); } // anh da ve dung W×H va da scale xong
+    if (mode === "size") { pan.dx = pan.dy = 0; zoom.s = 1; scaleEl.value = 100; setAngle(0); } // anh da ve dung W×H, da scale/xoay xong
     if (failed.length) { toast(`Crop ${success} file, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
     else toast(res.each ? `Đã crop ${success} ảnh.` : `Đã crop ${success} file về ${todo[0].rect.w}×${todo[0].rect.h}.`);
     await scan();
@@ -1433,7 +1474,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   runBtn.addEventListener("click", runCropFbf);
 
   update();
-  window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, pan, zoom, setScale, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
+  window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, pan, zoom, setScale, setAngle, rotFitEl, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
 })();
 
 // ============================================================

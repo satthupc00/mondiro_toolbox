@@ -103,7 +103,8 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
   (Riêng từng ảnh + Giữ tâm = Smart Crop cũ). **Theo kích thước W×H**: W×H mặc định là kích thước gốc của ảnh (chỉ nhập khi muốn đổi). Khung crop
   đứng yên giữa khung xem trước, kéo chuột trái để di hình vào vị trí muốn crop, giữ chuột phải kéo lên/xuống
   (hoặc ô Scale %) để scale hình to/nhỏ, double-click để về giữa và 100% (khung vượt ra ngoài hình thì
-  phần dư là nền trong suốt). Có khung xem trước từng frame. Ghi đè file gốc.
+  phần dư là nền trong suốt). **Xoay hình** bằng thanh trượt hoặc ô số (-180°..180°, double-click thanh trượt
+  về 0°), tick **Canvas tự nới theo góc xoay** để khung ra tự lớn lên vừa hình đã xoay, không bị cắt góc. Có khung xem trước từng frame. Ghi đè file gốc.
 - **MP4 → GIF** — kéo thả video (mp4, m4v, mov, webm), chọn FPS (10/12/15/24/30), chiều rộng
   (Gốc/720/480/320, chiều cao tự theo tỉ lệ), cắt đoạn bằng giây bắt đầu/kết thúc, bật/tắt lặp vô hạn.
   Bấm **Xuất GIF**: file `tên_video.gif` lưu cạnh video (trùng tên thì thêm `_1`, `_2`...), xem lại ngay
