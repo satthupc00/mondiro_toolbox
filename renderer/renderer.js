@@ -32,6 +32,7 @@ const TOOLS = {
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
   canvas: { label: "Resize Canvas", group: "XỬ LÝ ẢNH", desc: "Nới canvas mọi ảnh PNG bằng ảnh to nhất trong danh sách (nền trong suốt, không scale hình). Ghi đè file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
+  ccport: { label: "Particle CC Porting", group: "COCOS", desc: "Chuyển gói particle (prefab, anim, ảnh, meta) qua lại giữa Cocos 2.1.3 và 3.6.3. Zip mới lưu cạnh file gốc." },
   gif: { label: "MP4 → GIF", group: "ANIMATION", desc: "Chuyển video MP4 thành ảnh GIF: chọn FPS, chiều rộng, đoạn cắt. GIF lưu cạnh file video." },
   cropfbf: { label: "Crop FBF", group: "XỬ LÝ ẢNH", desc: "Tự cắt phần trong suốt thừa (chung cả chuỗi hoặc riêng từng ảnh), hoặc crop theo kích thước W×H. Ghi đè file gốc." },
 };
@@ -1475,6 +1476,167 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   update();
   window.__cropFbfTest = { addPaths, run: runCropFbf, setMode, setScope, plan, scan, pan, zoom, setScale, setAngle, rotFitEl, paddingEl, keepCenterEl, widthEl, heightEl, frameEl, get files() { return fl.files; } };
+})();
+
+// ============================================================
+// PARTICLE CC PORTING — tha file zip particle, tu nhan ban Cocos (2.1.3 / 3.6.3), xuat zip ban con lai
+// canh file goc: <ten>_363.zip hoac <ten>_213.zip. Phan chuyen doi nam o lib/ccport.js.
+// ============================================================
+(function initCcPort() {
+  const { unzipSync, zipSync } = require("fflate");
+  const ccport = require("../lib/ccport.js");
+  const { shell } = require("electron");
+  const dropEl = document.getElementById("ccDrop");
+  const dropEmptyEl = document.getElementById("ccDropEmpty");
+  const pickedEl = document.getElementById("ccPicked");
+  const nameEl = document.getElementById("ccName");
+  const dirEl = document.getElementById("ccDir");
+  const versEl = document.getElementById("ccVers");
+  const arrowEl = document.getElementById("ccArrow");
+  const outHintEl = document.getElementById("ccOutHint");
+  const runBtn = document.getElementById("ccRunBtn");
+  const openBtn = document.getElementById("ccOpenBtn");
+  const clearBtn = document.getElementById("ccClearBtn");
+  const listEl = document.getElementById("ccList");
+  const emptyEl = document.getElementById("ccEmpty");
+  const sizeInfoEl = document.getElementById("ccSizeInfo");
+  const statusEl = document.getElementById("ccStatus");
+
+  let zipPath = null, entries = null, detected = null, source = null, outPath = null;
+  const other = (v) => (v === ccport.V2 ? ccport.V3 : ccport.V2);
+
+  function setStatus(text, warn) {
+    statusEl.textContent = text || "";
+    statusEl.classList.toggle("warn", !!warn);
+  }
+
+  // abc.zip -> abc_363.zip (bo hau to version cu neu co), trung ten thi them _1, _2...
+  function outName(target) {
+    const dir = path.dirname(zipPath);
+    const base = path.basename(zipPath, path.extname(zipPath)).replace(/[_-](2\.1\.3|213|3\.6\.3|363)$/, "");
+    const tag = target.replace(/\./g, "");
+    let out = path.join(dir, `${base}_${tag}.zip`);
+    for (let i = 1; fs.existsSync(out); i++) out = path.join(dir, `${base}_${tag}_${i}.zip`);
+    return out;
+  }
+
+  function row(tag, cls, name) {
+    const r = document.createElement("div");
+    r.className = "plan-row " + cls;
+    const t = document.createElement("span");
+    t.className = "tag " + cls;
+    t.textContent = tag;
+    const n = document.createElement("span");
+    n.className = "name";
+    n.textContent = name;
+    r.append(t, n);
+    return r;
+  }
+
+  function render() {
+    versEl.querySelectorAll(".cc-ver").forEach((b) => {
+      b.classList.toggle("active", b.dataset.ver === source);
+      b.classList.toggle("target", !!source && b.dataset.ver === other(source));
+    });
+    arrowEl.classList.toggle("rev", source === ccport.V3);
+    listEl.innerHTML = "";
+    emptyEl.hidden = !!entries;
+    runBtn.disabled = !entries || !source;
+    if (!entries) {
+      sizeInfoEl.textContent = "";
+      outHintEl.textContent = "App tự nhận ra phiên bản khi thả file vào.";
+      setStatus("");
+      return;
+    }
+    const target = other(source);
+    outHintEl.innerHTML = `Chuyển <b>${source}</b> → <b>${target}</b>, lưu thành <b>${path.basename(outName(target))}</b>`;
+
+    // chay thu de liet ke se lam gi
+    const { report } = ccport.convertPackage(entries, target);
+    const paths = Object.keys(entries).filter((p) => !p.endsWith("/"));
+    for (const p of paths.filter((p) => p.endsWith(".prefab"))) listEl.appendChild(row("PREFAB", "keep", p));
+    for (const p of paths.filter((p) => p.endsWith(".anim"))) listEl.appendChild(row("ANIM", "keep", p));
+    if (report.image) listEl.appendChild(row("ẢNH", "info", `${report.image} ảnh (đổi file .meta, giữ nguyên ảnh)`));
+    if (report.dir) listEl.appendChild(row("THƯ MỤC", "info", `${report.dir} thư mục`));
+    if (report.already) listEl.appendChild(row("GIỮ", "info", `${report.already} file đã là bản ${target}, giữ nguyên`));
+    if (report.warnings.length) {
+      const sep = document.createElement("div");
+      sep.className = "cc-sep";
+      listEl.appendChild(sep);
+      report.warnings.forEach((w) => listEl.appendChild(row("LƯU Ý", "edit", w)));
+    }
+    sizeInfoEl.textContent = `${paths.length} file`;
+    if (!detected.version) setStatus("Không tìm thấy file .meta/.prefab/.anim của Cocos trong zip.", true);
+    else if (detected.mixed) setStatus(`Zip có cả 2 bản (${detected.counts[ccport.V2]} file 2.1.3, ${detected.counts[ccport.V3]} file 3.6.3). File nào đã đúng bản đích sẽ giữ nguyên.`, true);
+    else if (source !== detected.version) setStatus(`App nhận ra đây là bản ${detected.version}, bạn đang chọn ${source}.`, true);
+    else setStatus(`Đã nhận ra bản ${source}.`);
+  }
+
+  function load(p) {
+    if (!p || path.extname(p).toLowerCase() !== ".zip") { toast("Hãy thả file .zip"); return; }
+    try {
+      entries = unzipSync(new Uint8Array(fs.readFileSync(p)));
+    } catch (e) {
+      toast("Không đọc được file zip: " + e.message);
+      return;
+    }
+    zipPath = p;
+    detected = ccport.detect(entries);
+    source = detected.version;
+    outPath = null;
+    openBtn.hidden = true;
+    dropEmptyEl.hidden = true;
+    pickedEl.hidden = false;
+    nameEl.textContent = path.basename(p);
+    dirEl.textContent = path.dirname(p);
+    render();
+  }
+
+  function clear() {
+    zipPath = entries = detected = source = outPath = null;
+    openBtn.hidden = true;
+    dropEmptyEl.hidden = false;
+    pickedEl.hidden = true;
+    render();
+  }
+
+  setupDropzoneVisuals(dropEl);
+  dropEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = (e.dataTransfer.files || [])[0];
+    if (f) load(getFilePath(f));
+  });
+  versEl.querySelectorAll(".cc-ver").forEach((b) => b.addEventListener("click", () => {
+    if (!entries) return;
+    source = b.dataset.ver;
+    render();
+  }));
+  clearBtn.addEventListener("click", clear);
+  openBtn.addEventListener("click", () => outPath && shell.showItemInFolder(outPath));
+
+  function run() {
+    if (!entries || !source) return null;
+    const target = other(source);
+    try {
+      const { files, report } = ccport.convertPackage(entries, target);
+      const out = outName(target);
+      fs.writeFileSync(out, Buffer.from(zipSync(files, { level: 6 })));
+      outPath = out;
+      openBtn.hidden = false;
+      const n = report.prefab + report.anim;
+      toast(`Đã lưu ${path.basename(out)} (${report.prefab} prefab, ${report.anim} anim, ${report.image} ảnh).`);
+      setStatus(`Đã lưu ${path.basename(out)} cạnh file gốc.` + (report.warnings.length ? ` Có ${report.warnings.length} lưu ý, xem danh sách bên trên.` : ""), report.warnings.length > 0 && n > 0);
+      outHintEl.innerHTML = `Đã chuyển <b>${source}</b> → <b>${target}</b>, lưu thành <b>${path.basename(out)}</b>`;
+      return { out, report };
+    } catch (e) {
+      toast("Lỗi: " + e.message);
+      return null;
+    }
+  }
+  runBtn.addEventListener("click", run);
+
+  render();
+  window.__ccTest = { load, run, get source() { return source; }, get detected() { return detected; } };
 })();
 
 // ============================================================
