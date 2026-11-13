@@ -1,6 +1,6 @@
 # Mondiro Toolbox (bản Electron)
 
-Gộp 8 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, Resize Canvas, FBF Viewer, MP4 → GIF thành 1 app duy nhất,
+Gộp 9 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, Resize Canvas, FBF Viewer, MP4 → GIF, Particle CC Porting thành 1 app duy nhất,
 giao diện y theo bản mockup đã duyệt (sidebar icon-rail thu gọn/mở rộng, icon thật, bo góc).
 
 Đây là bản viết lại bằng Electron (giao diện đẹp như trình duyệt thật) thay cho bản Python/Tkinter
@@ -109,6 +109,12 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
   (Gốc/720/480/320, chiều cao tự theo tỉ lệ), cắt đoạn bằng giây bắt đầu/kết thúc, bật/tắt lặp vô hạn.
   Bấm **Xuất GIF**: file `tên_video.gif` lưu cạnh video (trùng tên thì thêm `_1`, `_2`...), xem lại ngay
   trong app và có nút **Mở thư mục**. Không cần cài ffmpeg.
+- **Particle CC Porting** — kéo thả file `.zip` gói particle (prefab + anim + ảnh + meta). App tự nhận ra
+  bản **Cocos 2.1.3** hay **3.6.3** và tô sáng nút tương ứng (bấm nút kia nếu muốn tự chọn). Bấm **Convert**
+  là lưu zip bản còn lại cạnh file gốc, tên thêm hậu tố `_363` hoặc `_213` (trùng tên thì thêm `_1`...),
+  thư mục bên trong có đuôi `_2.1.3` / `_3.6.3` cũng được đổi theo. Chuyển được ParticleSystem, Sprite,
+  Animation (anim đổi hình spriteFrame), meta ảnh / thư mục / prefab / anim; giữ nguyên uuid nên các liên kết không bị đứt.
+  Phần chưa hỗ trợ (anim di chuyển/scale node, component lạ) sẽ hiện trong mục **Lưu ý**. Mã chuyển đổi ở `lib/ccport.js`.
 
 ## Cấu trúc thư mục
 
