@@ -1,6 +1,6 @@
 # Mondiro Toolbox (bản Electron)
 
-Gộp 9 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, Resize Canvas, FBF Viewer, MP4 → GIF, Particle CC Porting thành 1 app duy nhất,
+Gộp 8 tool: Merge Atlas, Blur Symbols, Crop FBF, Rename, Resize, FBF Viewer, MP4 → GIF, Particle CC Porting thành 1 app duy nhất,
 giao diện y theo bản mockup đã duyệt (sidebar icon-rail thu gọn/mở rộng, icon thật, bo góc).
 
 Đây là bản viết lại bằng Electron (giao diện đẹp như trình duyệt thật) thay cho bản Python/Tkinter
@@ -86,15 +86,12 @@ chỉ giữ 4 chấm lớn, M dày hơn — để rõ khi pin trên taskbar). `b
 - **Resize** — scale hàng loạt theo % (thanh trượt + nút nhanh 25/50/75/150/200%) hoặc theo pixel
   (chỉ cần nhập Rộng hoặc Cao, chiều còn lại tự tính theo đúng tỉ lệ ảnh gốc của từng file).
   Xem trước kích thước **cũ → mới** với khung so sánh. Ghi đè trực tiếp lên file gốc.
-- **Resize Canvas** — kéo thả 1 loạt PNG (hoặc folder), app lấy **rộng lớn nhất × cao lớn nhất** trong danh sách
-  làm canvas chung rồi nới canvas mọi ảnh còn lại lên đúng kích thước đó. Phần thêm vào là nền trong suốt,
-  hình không bị scale. Điểm neo 3×3 (mặc định chính giữa để pivot Spine/Cocos không lệch), xem trước từng ảnh. Ghi đè file gốc.
 - **FBF Viewer** — kéo thả 1 hoặc **nhiều folder cùng lúc** (hoặc kéo thẳng các file ảnh, vd `walk_00.png`
   ... `walk_23.png`). App quét cả folder con, mỗi chuỗi ảnh thành 1 dòng trong **Playlist** bên trái
   (folder có nhiều chuỗi khác tên thì hiện `tên folder / tên chuỗi`). Click tên nào thì play chuỗi đó.
   Playlist luôn hiện sẵn, thả thêm sẽ nối vào playlist, nút ✕ để bỏ 1 chuỗi, **Xóa hết** để làm mới.
-  Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, nút Loop Ping-pong và Tua ngược.
-  Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong, R bật/tắt Tua ngược.
+  Play/Pause, tua từng khung, chỉnh FPS (mặc định 30, có 3 nút chọn nhanh 30/15/12), tốc độ x1–x4, nút Loop Ping-pong, Tua ngược và Chỉ play 1 lần (dừng ở khung cuối, bấm Play lại thì chạy lại từ đầu).
+  Phím tắt: ↑/↓ chuyển chuỗi trong playlist, Delete bỏ chuỗi đang xem, Space để Play/Stop, P bật/tắt Ping-pong, R bật/tắt Tua ngược, phím 1 bật/tắt Chỉ play 1 lần.
 
 - **Crop FBF** — tự cắt phần trong suốt thừa hoặc crop theo kích thước (kéo thả file hoặc folder). 2 chế độ:
   **Auto Crop**: tìm vùng có pixel được vẽ rồi cắt bỏ phần trong suốt thừa, với khung crop **Chung cả chuỗi**

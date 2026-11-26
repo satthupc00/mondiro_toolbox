@@ -30,7 +30,6 @@ const TOOLS = {
   blur: { label: "Blur Symbols", group: "SPINE / SYMBOLS", desc: "Blur Static Symbol và Tăng sáng hoặc tối, save đè file gốc." },
   rename: { label: "Rename", group: "XỬ LÝ ẢNH", desc: "Đổi tên hàng loạt (hậu tố ## để tự đánh số), hoặc tìm và thay thế chữ trong tên file." },
   resize: { label: "Resize", group: "XỬ LÝ ẢNH", desc: "Scale hàng loạt PNG theo % hoặc theo pixel, ghi đè trực tiếp lên file gốc." },
-  canvas: { label: "Resize Canvas", group: "XỬ LÝ ẢNH", desc: "Nới canvas mọi ảnh PNG bằng ảnh to nhất trong danh sách (nền trong suốt, không scale hình). Ghi đè file gốc." },
   frames: { label: "FBF Viewer", group: "ANIMATION", desc: "Xem trước chuỗi hình frame by frame." },
   ccport: { label: "Particle CC Porting", group: "COCOS", desc: "Chuyển gói particle (prefab, anim, ảnh, meta) qua lại giữa Cocos 2.1.3 và 3.6.3. Zip mới lưu cạnh file gốc." },
   gif: { label: "MP4 → GIF", group: "ANIMATION", desc: "Chuyển video MP4 thành ảnh GIF: chọn FPS, chiều rộng, đoạn cắt. GIF lưu cạnh file video." },
@@ -909,208 +908,6 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 })();
 
 // ============================================================
-// RESIZE CANVAS — noi canvas moi anh bang anh to nhat (rong lon nhat × cao lon nhat),
-// phan them vao la nen trong suot, giu theo diem neo (giong Canvas Size trong Photoshop).
-// ============================================================
-(function initCanvas() {
-  const dropEl = document.getElementById("cvDrop");
-  const emptyEl = dropEl.querySelector(".dz-empty");
-  const listEl = document.getElementById("cvList");
-  const targetEl = document.getElementById("cvTarget");
-  const sourceEl = document.getElementById("cvSource");
-  const anchorEl = document.getElementById("cvAnchor");
-  const runBtn = document.getElementById("cvRunBtn");
-  const clearBtn = document.getElementById("cvClearBtn");
-  const stageEl = document.getElementById("cvStage");
-  const canvasEl = document.getElementById("cvCanvas");
-  const imgEl = document.getElementById("cvImg");
-  const emptyStageEl = document.getElementById("cvEmpty");
-  const sizeInfoEl = document.getElementById("cvSizeInfo");
-  const frameRowEl = document.getElementById("cvFrameRow");
-  const frameEl = document.getElementById("cvFrame");
-  const frameLabelEl = document.getElementById("cvFrameLabel");
-  const statusEl = document.getElementById("cvStatus");
-
-  let anchor = { ax: 0.5, ay: 0.5 };
-  const sizes = new Map(); // filePath -> { width, height } | { error }
-  let scanToken = 0;
-  let busy = false;
-  let version = 0; // tang sau moi lan ap canvas de anh xem truoc nap lai file moi
-
-  const fl = makeSimpleFileList(listEl, {
-    acceptExt: [".png"],
-    onChange: () => {
-      const has = fl.files.length > 0;
-      emptyEl.hidden = has;
-      listEl.hidden = !has;
-      frameEl.max = Math.max(0, fl.files.length - 1);
-      const sel = fl.selected();
-      if (sel >= 0) frameEl.value = sel;
-      else if (+frameEl.value > +frameEl.max) frameEl.value = frameEl.max;
-      scan();
-    },
-  });
-  emptyEl.hidden = false;
-  listEl.hidden = true;
-
-  function collect(p, out, depth = 0) {
-    let st;
-    try { st = fs.statSync(p); } catch (e) { return; }
-    if (st.isDirectory()) {
-      if (depth > 4) return;
-      for (const n of fs.readdirSync(p)) collect(path.join(p, n), out, depth + 1);
-    } else if (path.extname(p).toLowerCase() === ".png") out.push(p);
-  }
-
-  function addPaths(paths) {
-    const found = [];
-    for (const p of paths) collect(p, found);
-    const before = fl.files.length;
-    for (const p of found) if (!fl.files.includes(p)) fl.files.push(p);
-    fl.files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    if (!found.length) toast("Không tìm thấy file PNG hợp lệ.");
-    if (fl.files.length !== before) fl.render();
-  }
-
-  setupDropzoneVisuals(dropEl);
-  dropEl.addEventListener("drop", (e) => {
-    e.preventDefault();
-    addPaths(Array.from(e.dataTransfer.files || []).map(getFilePath).filter(Boolean));
-  });
-  clearBtn.addEventListener("click", () => { fl.clear(); sizes.clear(); });
-
-  async function scan() {
-    const token = ++scanToken;
-    const todo = fl.files.filter((p) => !sizes.has(p));
-    for (let i = 0; i < todo.length; i++) {
-      if (token !== scanToken) return;
-      setStatus(`Đang đọc kích thước ${i + 1}/${todo.length}...`);
-      try { sizes.set(todo[i], await getImageSize(todo[i])); }
-      catch (e) { sizes.set(todo[i], { error: e.message }); }
-    }
-    if (token !== scanToken) return;
-    update();
-  }
-
-  function setStatus(text, warn) {
-    statusEl.textContent = text || "";
-    statusEl.classList.toggle("warn", !!warn);
-  }
-
-  /** Canvas dich + vi tri cua tung anh: { W, H, widest, tallest, frames: [{ p, width, height, x, y }] } */
-  function plan() {
-    const list = fl.files.map((p) => ({ p, s: sizes.get(p) })).filter((it) => it.s && !it.s.error);
-    if (!list.length) return null;
-    let widest = list[0], tallest = list[0];
-    for (const it of list) {
-      if (it.s.width > widest.s.width) widest = it;
-      if (it.s.height > tallest.s.height) tallest = it;
-    }
-    const W = widest.s.width, H = tallest.s.height;
-    return {
-      W, H, widest: widest.p, tallest: tallest.p,
-      frames: list.map(({ p, s }) => ({
-        p, width: s.width, height: s.height,
-        x: Math.round((W - s.width) * anchor.ax), y: Math.round((H - s.height) * anchor.ay),
-      })),
-    };
-  }
-
-  function update() {
-    const has = fl.files.length > 0;
-    const res = has ? plan() : null;
-    canvasEl.hidden = !res;
-    emptyStageEl.hidden = !!res;
-    frameRowEl.hidden = !has;
-    if (!res) {
-      targetEl.textContent = "—";
-      sourceEl.textContent = "Lấy theo ảnh to nhất trong danh sách";
-      sizeInfoEl.textContent = "";
-      frameLabelEl.textContent = "";
-      if (!has) setStatus("");
-      return;
-    }
-
-    targetEl.textContent = `${res.W} × ${res.H}`;
-    sourceEl.textContent = res.widest === res.tallest
-      ? `Theo ảnh ${path.basename(res.widest)}`
-      : `Rộng theo ${path.basename(res.widest)}, cao theo ${path.basename(res.tallest)}`;
-    sourceEl.title = sourceEl.textContent;
-
-    const idx = Math.min(+frameEl.value, fl.files.length - 1);
-    const p = fl.files[idx];
-    frameLabelEl.textContent = `${idx + 1}/${fl.files.length} · ${path.basename(p)}`;
-    const f = res.frames.find((it) => it.p === p);
-
-    // khung canvas dich vua stage, anh dat dung vi tri theo diem neo
-    const scale = Math.min((stageEl.clientWidth - 24) / res.W, (stageEl.clientHeight - 24) / res.H, 4);
-    canvasEl.style.width = res.W * scale + "px";
-    canvasEl.style.height = res.H * scale + "px";
-    if (f) {
-      const url = fileUrlOf(p, version);
-      if (imgEl.dataset.src !== url) { imgEl.src = url; imgEl.dataset.src = url; }
-      imgEl.hidden = false;
-      imgEl.style.left = f.x * scale + "px";
-      imgEl.style.top = f.y * scale + "px";
-      imgEl.style.width = f.width * scale + "px";
-      imgEl.style.height = f.height * scale + "px";
-      sizeInfoEl.innerHTML = `${f.width}×${f.height} → <b>${res.W}×${res.H}</b>`;
-    } else {
-      imgEl.hidden = true;
-      sizeInfoEl.textContent = "";
-    }
-
-    const n = res.frames.filter((it) => it.width !== res.W || it.height !== res.H).length;
-    const bad = fl.files.length - res.frames.length;
-    if (bad) setStatus(`${bad} file không đọc được, sẽ bỏ qua.`, true);
-    else if (!n) setStatus("Các ảnh đã cùng kích thước, không cần nới canvas.");
-    else setStatus(`${n}/${res.frames.length} ảnh sẽ được nới canvas lên ${res.W}×${res.H}.`);
-  }
-
-  anchorEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
-    anchor = { ax: parseFloat(b.dataset.ax), ay: parseFloat(b.dataset.ay) };
-    anchorEl.querySelectorAll("button").forEach((x) => x.classList.toggle("active", x === b));
-    update();
-  }));
-  frameEl.addEventListener("input", update);
-  new ResizeObserver(() => { if (!document.querySelector('.tab-panel[data-panel="canvas"]').hidden) update(); }).observe(stageEl);
-
-  async function runCanvas() {
-    if (busy) return { success: 0, failed: [] };
-    if (!fl.files.length) { toast("Hãy thêm ảnh PNG trước."); return { success: 0, failed: [] }; }
-    await scan();
-    const res = plan();
-    if (!res) { toast("Không đọc được ảnh nào."); return { success: 0, failed: [] }; }
-    const todo = res.frames.filter((it) => it.width !== res.W || it.height !== res.H);
-    if (!todo.length) { toast("Các ảnh đã cùng kích thước."); return { success: 0, failed: [] }; }
-    busy = true;
-    runBtn.disabled = true;
-    let success = 0;
-    const failed = [];
-    for (let i = 0; i < todo.length; i++) {
-      setStatus(`Đang áp canvas ${i + 1}/${todo.length}...`);
-      const f = todo[i];
-      // cat theo khung lon hon anh: toa do am = phan nen trong suot them vao ben trai/tren
-      try { await cropToRect(f.p, { x: -f.x, y: -f.y, w: res.W, h: res.H }); success++; }
-      catch (e) { failed.push(`${path.basename(f.p)}: ${e.message}`); }
-      sizes.delete(f.p);
-      sizeCache.delete(f.p);
-    }
-    busy = false;
-    runBtn.disabled = false;
-    version++;
-    if (failed.length) { toast(`Đã áp canvas ${success} file, lỗi ${failed.length}.`); console.error(failed.join("\n")); }
-    else toast(`Đã nới canvas ${success} file về ${res.W}×${res.H}.`);
-    await scan();
-    return { success, failed };
-  }
-  runBtn.addEventListener("click", runCanvas);
-
-  update();
-  window.__canvasTest = { addPaths, run: runCanvas, plan, scan, frameEl, get files() { return fl.files; } };
-})();
-
-// ============================================================
 // CROP FBF — crop ca chuoi hinh ve cung 1 khung (Auto Crop theo alpha cua ca chuoi, hoac W×H + diem neo)
 // ============================================================
 (function initCropFbf() {
@@ -1871,6 +1668,8 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   const reverseBtn = document.getElementById("fvReverseBtn");
   let pingPong = false;
   let reverse = false; // tua nguoc: play tu khung cuoi ve khung dau
+  const onceBtn = document.getElementById("fvOnceBtn");
+  let playOnce = false; // chi play 1 vong roi dung o khung cuoi
   let speed = 1; // 1x/2x/3x/4x — nhan voi toc do play, khong doi FPS hien thi
 
   const EMPTY_HTML = `
@@ -2113,9 +1912,21 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     const tickMs = 1000 / fps;
     // Tua nguoc = doi chieu chi so khung (n-1-i); van dung chung voi ping-pong/FPS/speed.
     const flip = (i) => (reverse ? frameCount - 1 - i : i);
-    const startTime = performance.now() - (flip(currentIndex) / virtualLen) * cycleMs;
+    // khung dung cua che do play 1 lan: cuoi chuoi (ping-pong thi quay ve khung dau)
+    const endIndex = flip(pingPong ? 0 : frameCount - 1);
+    // dang dung o khung cuoi ma bam play lai thi chay lai tu dau
+    const fromStart = playOnce && currentIndex === endIndex;
+    const startTime = performance.now() - (fromStart ? 0 : (flip(currentIndex) / virtualLen) * cycleMs);
     timer = setInterval(() => {
-      const elapsed = (performance.now() - startTime) % cycleMs;
+      const raw = performance.now() - startTime;
+      if (playOnce && raw >= cycleMs) {
+        currentIndex = endIndex;
+        scrubEl.value = currentIndex;
+        renderFrame();
+        stopPlaying();
+        return;
+      }
+      const elapsed = raw % cycleMs;
       const vIdx = Math.floor((elapsed / cycleMs) * virtualLen) % virtualLen;
       currentIndex = flip(virtualIndexToFrameIndex(vIdx, frameCount));
       scrubEl.value = currentIndex;
@@ -2186,6 +1997,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   reverseBtn.addEventListener("click", () => setReverse(!reverse));
 
+  function setPlayOnce(v) {
+    playOnce = !!v;
+    onceBtn.classList.toggle("active", playOnce);
+    if (playing) { stopPlaying(); startPlaying(); }
+  }
+
+  onceBtn.addEventListener("click", () => setPlayOnce(!playOnce));
+
   document.addEventListener("keydown", (e) => {
     if (document.querySelector('.tab-panel[data-panel="frames"]').hidden) return;
     const tag = document.activeElement && document.activeElement.tagName;
@@ -2203,6 +2022,10 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
     }
     if (e.key === "r" || e.key === "R") {
       setReverse(!reverse);
+      return;
+    }
+    if (e.key === "1") {
+      setPlayOnce(!playOnce);
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && current) {
@@ -2224,13 +2047,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
   // expose for internal test harness (headless smoke test)
   window.__fbfViewer = {
     handleDropped, handleDroppedRaw, handleDroppedPaths, selectSequence, removeSequence, clearPlaylist, startPlaying, stopPlaying, setFps,
-    setPingPong, setReverse, computeVirtualLength, virtualIndexToFrameIndex, setSpeed,
+    setPingPong, setReverse, setPlayOnce, computeVirtualLength, virtualIndexToFrameIndex, setSpeed,
     get playing() { return playing; },
     get currentIndex() { return currentIndex; },
     get current() { return current; },
     get playlist() { return playlist; },
     get pingPong() { return pingPong; },
     get reverse() { return reverse; },
+    get playOnce() { return playOnce; },
     get speed() { return speed; },
   };
 })();
