@@ -614,9 +614,14 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
       const p = getFilePath(f);
       if (p && fs.existsSync(p) && fs.statSync(p).isFile() && !files.includes(p)) files.push(p);
     });
+    sortFiles();
     render();
   });
 
+  // Explorer tha file theo thu tu chon (vd 3, 4 ... 15, 1, 2) -> xep lai theo so tu nhien: 1, 2, 3 ... 10, 11
+  function sortFiles() {
+    files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+  }
   clearBtn.addEventListener("click", () => { files = []; render(); });
 
   render();
@@ -647,7 +652,7 @@ function makeDropzoneFileList(dropEl, { acceptExt = [".png"], onChange } = {}) {
 
   runBtn.addEventListener("click", runRename);
   window.__renameTest = {
-    addFile: (p) => { if (!files.includes(p)) files.push(p); render(); },
+    addFile: (p) => { if (!files.includes(p)) files.push(p); sortFiles(); render(); },
     run: runRename,
     templateEl,
     findEl,
